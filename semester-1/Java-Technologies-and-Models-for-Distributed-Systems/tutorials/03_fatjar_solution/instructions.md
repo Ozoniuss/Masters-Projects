@@ -22,3 +22,5 @@ java -jar new.jar
 ```
 
 A more clever approach would be to include just the classes used by the application (by exploring the imports).
+
+Note that it is possible this approach leads to name conflicts.
