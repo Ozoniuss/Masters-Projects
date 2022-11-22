@@ -1,0 +1,4 @@
+apply plugin: 'application'
+repositories { mavenCentral() }
+dependencies { implementation 'log4j:log4j:+' }
+mainClassName = 'Hw'
