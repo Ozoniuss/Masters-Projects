@@ -104,6 +104,40 @@ cp build/libs/homework.war $GF_HOME/glassfish/domains/domain1/autodeploy
 copy build\libs\homework.war "%GF_HOME%\glassfish\domains\domain1\autodeploy" # Windows
 ```
 
+### External context
+
+In time, it has been proven that it's useful to keep the contents of the war archive on a location on the disk, and point the application to the folder fith the contents. This is called exploded (exploded war) deployment. 
+
+To perform this type of deployment, first build the application from the `homework` directory:
+
+```
+gradle clean build
+```
+
+Next, since this type of deployment requires unzipping the war archive, extract the contents of the war archive inside `extern/exploded_war`.
+
+For Tomcat, copy the `extern/aliasTomcat.xml` file to a special location in the tomcat directory:
+
+```
+cp extern/aliasTomcat.xml $CATALINA_HOME/conf/Catalina/localhost/homework.xml
+copy extern\aliasTomcat.xml %CATALINA_HOME%\conf\Catalina\localhost\homework.xml # Windows
+```
+
+Run the Tomcat container using
+
+```
+$CATALINA_HOME/bin/startup.sh
+%CATALINA_HOME%\bin\startup.bat # Windows
+```
+
+Open the browser and access the application at `http://localhost:8080/homework`.
+
+In order to stop the Tomcat container, use the command:
+
+```
+$CATALINA_HOME/bin/shutdown.sh
+%CATALINA_HOME%\bin\shutdown.bat # Windows
+
 ### Embedded deployments
 
 In case of embedded deployments, the server configuration is no longer creader as an xml file, but rather integrated in the code directly. The projects now have two classes `TomcatServer.java` and `JettyServer.java` which configure the Tomcat and Jetty server respectively. The `build.gradle` file also changed to include the embedded dependencies and apply the java plugin instead (this type of deployment produces an executable jar archive, not a web archive).
