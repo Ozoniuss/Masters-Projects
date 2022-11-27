@@ -23,12 +23,11 @@ public class Dispatcher extends HttpServlet {
         } else {
             try {
                 int number = Integer.parseInt(req.getParameter("number"));
+                rdStoreNumber.forward(req, res);
             } catch (Exception e) {
                 rdError.forward(req, res);
             }
         }
-
-        rdStoreNumber.forward(req, res);
 
     }
 

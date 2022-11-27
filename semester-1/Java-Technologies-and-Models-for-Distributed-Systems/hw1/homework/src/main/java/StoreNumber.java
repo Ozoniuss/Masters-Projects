@@ -85,13 +85,17 @@ public class StoreNumber extends HttpServlet {
             HttpServletResponse response) throws ServletException, IOException {
 
         String name;
-        int number;
+        int number = 0;
 
         // Name has already been validated
         name = request.getParameter("name");
 
         // Number has already been validated
-        number = Integer.parseInt(request.getParameter("number"));
+        try {
+            number = Integer.parseInt(request.getParameter("number"));
+        } catch (Exception e) {
+            System.out.println("muie");
+        }
 
         int count = pc.Count(number);
 
