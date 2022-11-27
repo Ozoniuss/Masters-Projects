@@ -61,11 +61,11 @@ copy build\libs\homework.war "%JETTY_HOME%\webapps" # Windows
 
 Note that in other versions of Jetty, the webapps folder might be located inside a directory called jetty-base.
 
-Next, start the Jetty container:
+Next, start the Jetty container. Run this command from the `$JETTY_HOME` directory (TODO: for some reason, doesn't work outside):
 
 ```
-$JETTY_HOME/bin/shutdown.sh
-%JETTY_HOME%\bin\shutdown.bat # Windows
+java -jar start.jar
+java -jar start.jar
 ```
 
 Open the browser and access the application at `http://localhost:8080/homework`. To stop the container, just kill its running process in the terminal.
@@ -137,6 +137,24 @@ In order to stop the Tomcat container, use the command:
 ```
 $CATALINA_HOME/bin/shutdown.sh
 %CATALINA_HOME%\bin\shutdown.bat # Windows
+
+For Jetty, the process is similar. Copy the aliasJetty.xml file to the Jetty home directory (the file can be named anything with the .xml extension):
+
+```
+cp extern/aliasJetty.xml $JETTY_HOME/webapps/homework.xml
+copy extern\aliasJetty.xml %JETTY_HOME%\webapps\homework.xml # Windows
+```
+
+Next, start the Jetty container. Run this command from the `$JETTY_HOME` directory (TODO: for some reason, doesn't work outside):
+
+```
+java -jar start.jar
+java -jar start.jar
+```
+
+Open the browser and access the application at `http://localhost:8080/homework`. To stop the container, just kill its running process in the terminal.
+
+Open the browser and access the application at `http://localhost:8080/homework`. To stop the container, just kill its running process in the terminal.
 
 ### Embedded deployments
 
