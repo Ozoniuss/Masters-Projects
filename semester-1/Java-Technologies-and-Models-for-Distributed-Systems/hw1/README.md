@@ -104,6 +104,26 @@ cp build/libs/homework.war $GF_HOME/glassfish/domains/domain1/autodeploy
 copy build\libs\homework.war "%GF_HOME%\glassfish\domains\domain1\autodeploy" # Windows
 ```
 
+### Embedded deployments
+
+In case of embedded deployments, the server configuration is no longer creader as an xml file, but rather integrated in the code directly. The projects now have two classes `TomcatServer.java` and `JettyServer.java` which configure the Tomcat and Jetty server respectively. The `build.gradle` file also changed to include the embedded dependencies and apply the java plugin instead (this type of deployment produces an executable jar archive, not a web archive).
+
+To get started, build the application with
+
+```
+gradle clean build
+```
+
+Now, the server (in both Tomcat and Jetty cases) is ran by just executing the jar archive:
+
+```
+java -jar build/libs/homeworkembedded.jar
+java -jar build\libs\homeworkembedded.jar # Windows
+```
+
+The server can be stopped by killing its running process in the terminal.
+
+TODO: Jetty doesn't work yet.
 
 ## Errors encountered
 
