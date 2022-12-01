@@ -137,6 +137,7 @@ In order to stop the Tomcat container, use the command:
 ```
 $CATALINA_HOME/bin/shutdown.sh
 %CATALINA_HOME%\bin\shutdown.bat # Windows
+```
 
 For Jetty, the process is similar. Copy the aliasJetty.xml file to the Jetty home directory (the file can be named anything with the .xml extension):
 
