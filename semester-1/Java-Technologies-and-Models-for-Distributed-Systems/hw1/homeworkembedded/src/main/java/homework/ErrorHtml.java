@@ -16,9 +16,9 @@ public class ErrorHtml extends HttpServlet {
         out.println("<title>Error</title>");
         out.println("</head>");
         out.println("<body>");
-        out.println("<h2>You had an error asshole</h2>");
+        out.println("<h2>There was an error</h2>");
         if (request.getParameter("name") == null) {
-            out.println("<h3>Don't u have a name?<h3>");
+            out.println("<h3>\"\" is not a name, don't u have a name?<h3>");
         } else {
             out.println("<h3>You know that " + request.getParameter("number") + " is not a number right? </h3>");
         }

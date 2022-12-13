@@ -8,9 +8,7 @@ public class Dispatcher extends HttpServlet {
     public void doGet(HttpServletRequest req, HttpServletResponse res)
             throws ServletException, IOException {
 
-        System.out.println("sdsadsadasdas");
         RequestDispatcher rdStoreNumber = req.getRequestDispatcher("storeNumber");
-        System.out.println("fffffffffff");
         RequestDispatcher rdError = req.getRequestDispatcher("error");
         RequestDispatcher rdIndex = req.getRequestDispatcher("client");
 
