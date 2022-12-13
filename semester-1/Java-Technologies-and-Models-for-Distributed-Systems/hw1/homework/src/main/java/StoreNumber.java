@@ -90,11 +90,15 @@ public class StoreNumber extends HttpServlet {
         // Name has already been validated
         name = request.getParameter("name");
 
+        if (name == "") {
+            System.out.println("Empty name encountered");
+        }
+
         // Number has already been validated
         try {
             number = Integer.parseInt(request.getParameter("number"));
         } catch (Exception e) {
-            System.out.println("muie");
+            System.out.println("Non-number encountered");
         }
 
         int count = pc.Count(number);
