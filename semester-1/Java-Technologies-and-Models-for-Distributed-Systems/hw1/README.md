@@ -5,11 +5,13 @@
 The following environment variables are set:
 
 - `CATALINA_HOME` points to the Tomcat directory;
-- `JETTY_HOME` points to the Jetty directory (other versions of jetty might deposit deployments in another directory specified with `JETTY_BASE`)
+- `JETTY_HOME` points to the Jetty directory (other versions of jetty might deposit deployments in another directory specified with `JETTY_BASE`);
+- `JBOSS_HOME` points to the WildFly directory;
+- `GF_HOME` points to the GlassFish directory.
 
 ## Technologies and installation
 
-The application is written in Java and uses Java 8, and is based on Servlets (version 4) to interact with web clients. These servlets are managed by an application servers, which also provides web support.  We presented deploying the application using the Tomcat (tomcat-9.0.69) and Jetty (jetty-9.4.49) servlet containers, as well as the Wildfly (widlfly-21.0.0) and Glassfish (glassfish-5) EJB containers.
+The application is written in Java and uses Java Development Kit (JDK) 8, and is based on Servlets (version 4) to interact with web clients. These servlets are managed by an application servers, which also provides web support.  We presented deploying the application using the Tomcat (tomcat-9.0.69) and Jetty (jetty-9.4.49) servlet containers, as well as the Wildfly (widlfly-21.0.0) and Glassfish (glassfish-5) EJB containers.
 
 ## Running the application
 
@@ -41,7 +43,7 @@ $CATALINA_HOME/bin/startup.sh
 %CATALINA_HOME%\bin\startup.bat # Windows
 ```
 
-Open the browser and access the application at `http://localhost:8080/homework`.
+Open the browser and access the application at `http://localhost:8080/homework/home`.
 
 In order to stop the Tomcat container, use the command:
 
@@ -68,7 +70,7 @@ java -jar start.jar
 java -jar start.jar
 ```
 
-Open the browser and access the application at `http://localhost:8080/homework`. To stop the container, just kill its running process in the terminal.
+Open the browser and access the application at `http://localhost:8080/homework/home`. To stop the container, just kill its running process in the terminal.
 
 </br>
 
@@ -104,6 +106,13 @@ cp build/libs/homework.war $GF_HOME/glassfish/domains/domain1/autodeploy
 copy build\libs\homework.war "%GF_HOME%\glassfish\domains\domain1\autodeploy" # Windows
 ```
 
+Finally, once done stop the GlassFish server:
+
+```
+$GF_HOME/bin/asadmin stop-domain
+%GF_HOME%\bin\asadmin stop-domain # Windows
+```
+
 ### External context
 
 In time, it has been proven that it's useful to keep the contents of the war archive on a location on the disk, and point the application to the folder fith the contents. This is called exploded (exploded war) deployment. 
@@ -130,13 +139,20 @@ $CATALINA_HOME/bin/startup.sh
 %CATALINA_HOME%\bin\startup.bat # Windows
 ```
 
-Open the browser and access the application at `http://localhost:8080/homework`.
+Open the browser and access the application at `http://localhost:8080/homework/home`.
 
 In order to stop the Tomcat container, use the command:
 
 ```
 $CATALINA_HOME/bin/shutdown.sh
 %CATALINA_HOME%\bin\shutdown.bat # Windows
+```
+
+Finally, to perform a cleanup operation just remove the xml configuration file that was uploaded inside Tomcat's directory. In order to do this, run 
+
+```
+rm  $CATALINA_HOME/conf/Catalina/localhost/homework.xml 
+del  %CATALINA_HOME%\conf\Catalina\localhost\homework.xml # Windows
 ```
 
 For Jetty, the process is similar. Copy the aliasJetty.xml file to the Jetty home directory (the file can be named anything with the .xml extension):
@@ -153,9 +169,14 @@ java -jar start.jar
 java -jar start.jar
 ```
 
-Open the browser and access the application at `http://localhost:8080/homework`. To stop the container, just kill its running process in the terminal.
+Open the browser and access the application at `http://localhost:8080/homework/home`. To stop the container, just kill its running process in the terminal.
 
-Open the browser and access the application at `http://localhost:8080/homework`. To stop the container, just kill its running process in the terminal.
+Finally, to perform a cleanup operation just remove the xml configuration file that was uploaded inside Jetty's directory. In order to do this, run 
+
+```
+rm extern/aliasJetty.xml $JETTY_HOME/webapps/homework.xml
+del extern\aliasJetty.xml %JETTY_HOME%\webapps\homework.xml # Windows
+```
 
 ### Embedded deployments
 
