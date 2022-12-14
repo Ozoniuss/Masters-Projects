@@ -12,15 +12,22 @@ public class Dispatcher extends HttpServlet {
         RequestDispatcher rdError = req.getRequestDispatcher("error");
         RequestDispatcher rdIndex = req.getRequestDispatcher("client");
 
-        // If any parameter is null, show the index
-        if (req.getParameter("name") == null || req.getParameter("number") == null) {
+        // If both parameters are null, show the index
+        if (req.getParameter("name") == null && req.getParameter("number") == null) {
             rdIndex.forward(req, res);
 
-            // If any of these is invalid, get lost
-        } else if (req.getParameter("name") == "") {
+            // name is invalid
+        } else if (req.getParameter("name").isEmpty() || req.getParameter("name") == null) {
             rdError.forward(req, res);
+
+            // number is invalid
         } else {
-            rdStoreNumber.forward(req, res);
+            try {
+                Integer.parseInt(req.getParameter("number"));
+                rdStoreNumber.forward(req, res);
+            } catch (Exception e) {
+                rdError.forward(req, res);
+            }
         }
 
     }
