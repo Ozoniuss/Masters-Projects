@@ -18,10 +18,10 @@ public class ErrorHtml extends HttpServlet {
         out.println("</head>");
         out.println("<body>");
         out.println("<h2>You had an error, fix it</h2>");
-        if (request.getParameter("name") == null) {
-            out.println("<h3>\"\" is not a name, don't u have a name??<h3>");
+        if (request.getParameter("name") == null || request.getParameter("name").isEmpty()) {
+            out.println("<h3>don't u have a name??<h3>");
         } else {
-            out.println("<h3>You know that " + request.getParameter("number") + " is not a number right? </h3>");
+            out.println("<h3>You know that \"" + request.getParameter("number") + "\" is not a number right? </h3>");
         }
         out.println("</body>");
         out.println("</html>");
