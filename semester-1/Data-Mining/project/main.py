@@ -1,5 +1,7 @@
 import csv
 from dataclasses import dataclass
+from dataclass_csv import DataclassReader
+from typing import List
 
 @dataclass(frozen=True)
 class Reservation:
@@ -21,7 +23,7 @@ class Reservation:
     no_of_previous_bookings_not_canceled: int
     avg_price_per_room: float
     no_of_special_requests: int
-    booking_status: bool
+    booking_status: str
 
 
 def print_data(file: str):
@@ -30,11 +32,18 @@ def print_data(file: str):
         for row in spamreader:
             print(', '.join(row))
 
-    
+def read_data(file: str):
+    all_reservations = []
+    with open(file) as reservations:
+        reader = DataclassReader(reservations, Reservation)
+        for row in reader:
+            all_reservations.append(row)
+
+    return all_reservations
 
 def main():
-    print_data("Hotel-Reservations.csv")
-
+    reservations = read_data("Hotel-Reservations.csv")
+    print(reservations)
 
 
 if __name__ == "__main__":
