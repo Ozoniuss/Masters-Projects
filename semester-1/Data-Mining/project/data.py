@@ -1,5 +1,3 @@
-# import pandas as pd
-# import numpy as np
 # The following were computed by going through the list of all reservations.
 
 MEAL_PLANS = {
