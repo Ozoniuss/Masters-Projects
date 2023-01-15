@@ -1,7 +1,7 @@
 import pandas as pd
 from data import room_type_to_int, market_segment_type_to_int, meal_plan_to_int, booking_status_to_int
 import numpy as np
-from termcolor import colored, cprint
+from termcolor import colored
 
 print(colored("reading reservations data....", "green"))
 
