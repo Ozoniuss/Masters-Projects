@@ -2,9 +2,13 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"strconv"
+	"strings"
 
 	crypt "safechat/encryption"
 )
@@ -16,6 +20,7 @@ const (
 )
 
 const (
+	NO_HEADER    byte = 255
 	CLIENT_HELLO byte = 0
 	SERVER_HELLO byte = 1
 	CLIENT_DONE  byte = 2
@@ -39,11 +44,27 @@ func newState() ConnState {
 	}
 }
 
+//	func readMessage() (byte, string) {
+//		var typ byte
+//		var msg string
+//		fmt.Scanf("%d:%s\n", &typ, &msg)
+//		return typ, msg
+//	}
 func readMessage() (byte, string) {
-	var typ byte
 	var msg string
-	fmt.Scanf("%d:%s\n", &typ, &msg)
-	return typ, msg
+
+	fmt.Scanln(&msg)
+
+	headerDelimPos := strings.Index(msg, ":")
+	if headerDelimPos == -1 {
+		return CLIENT_MSG, msg
+	} else {
+		header, err := strconv.ParseUint(msg[:headerDelimPos], 10, 8)
+		if err != nil {
+			return CLIENT_MSG, msg
+		}
+		return byte(header), msg[headerDelimPos+1:]
+	}
 }
 
 func writeMsg(typ byte, msg string, s *ConnState) []byte {
@@ -64,6 +85,9 @@ func main() {
 
 	state := newState()
 
+	autoConnect(connection, &state)
+	//processMessage(connection, &state)
+
 	for {
 		typ, msg := readMessage()
 		sends := writeMsg(typ, msg, &state)
@@ -71,45 +95,85 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		processMessage(connection, &state)
+		// send the hello automatically so it's taken care of by the client
+		displayMessage(connection, &state)
 	}
 }
 
-func processMessage(connection net.Conn, s *ConnState) error {
+func autoConnect(connection net.Conn, s *ConnState) {
+	sends := []byte{CLIENT_HELLO}
+	connection.Write(sends)
 
+	// Receives server hello
+	buffer, mLen, err := readFromServer(connection)
+	if err != nil {
+		fmt.Printf("an error occured: %v", err)
+	}
+	header := buffer[0]
+	content := buffer[1:mLen]
+
+	if header != SERVER_HELLO {
+		fmt.Println("an error occured during the handshake")
+		os.Exit(1)
+	}
+
+	// Generate symmetric key after client hello
+	pubKey := &crypt.PublicKey{}
+	pubKey.Unmarshal(content)
+	s.pubKey = pubKey
+
+	symKey := generateSymKey()
+	fmt.Printf("[server hello] generated sym key: %v\n", symKey)
+
+	msg := pubKey.EncryptString(symKey[:])
+	connection.Write(writeMsg(CLIENT_DONE, msg, s))
+
+	s.symKey = &symKey
+
+	// Receives server done
+	buffer, mLen, err = readFromServer(connection)
+	if err != nil {
+		fmt.Printf("an error occured: %v", err)
+	}
+	header = buffer[0]
+	if header != SERVER_DONE {
+		fmt.Println("did not receive server done")
+		os.Exit(1)
+	}
+	fmt.Println("[server done] handshake complete")
+}
+
+func readFromServer(connection net.Conn) ([]byte, int, error) {
 	buffer := make([]byte, 1024)
 	mLen, err := connection.Read(buffer)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 	if mLen == 0 {
-		return errors.New("Received null message")
+		return nil, 0, errors.New("Received null message")
+	}
+	return buffer, mLen, nil
+}
+
+func displayMessage(connection net.Conn, s *ConnState) (byte, error) {
+
+	buffer, mLen, err := readFromServer(connection)
+	if err != nil {
+		fmt.Printf("an error occured: %v", err)
 	}
 	header := buffer[0]
 	content := buffer[1:mLen]
 
 	switch header {
 	case SERVER_HELLO:
-		fmt.Println("[server hello] received server hello")
 
+		fmt.Println("[server hello] received server hello")
 		pubKey := &crypt.PublicKey{}
 		pubKey.Unmarshal(content)
-
-		s.pubKey = pubKey
-
 		fmt.Printf("[server hello] public key is %+v\n", pubKey)
 
-		symKey := generateSymKey()
-		fmt.Printf("[server hello] generated sym key: %v\n", symKey)
-
-		msg := pubKey.EncryptString(symKey[:])
-
-		connection.Write(writeMsg(CLIENT_DONE, msg, s))
-
-		s.symKey = &symKey
-
 	case SERVER_MSG:
-		fmt.Printf("[message] server encrypted message as: %s\n", buffer[1:mLen])
+		fmt.Printf("[message] server encrypted message as: %s\n", base64.URLEncoding.EncodeToString(content))
 
 	case SERVER_DONE:
 		fmt.Println("[server done] handshake complete")
@@ -120,7 +184,7 @@ func processMessage(connection net.Conn, s *ConnState) error {
 	default:
 		fmt.Println("[error] handshake complete")
 	}
-	return nil
+	return NO_HEADER, nil
 }
 
 func generateSymKey() [32]byte {

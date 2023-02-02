@@ -2,10 +2,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	crypt "safechat/encryption"
 )
@@ -159,13 +161,15 @@ func processMessage(connection net.Conn, state *ConnState) error {
 
 		state.setSymKey(symKey32)
 
+		time.Sleep(1 * time.Second)
+
 		sends := writeMsg(SERVER_DONE, "")
 		connection.Write(sends)
 
 	case CLIENT_MSG:
-		fmt.Printf("[message] received encrypted message: %s\n", content)
+		fmt.Printf("[message] received encrypted message: %s\n", base64.URLEncoding.EncodeToString(content))
 		symkey := state.getSymKey()
-		msg := crypt.DecryptAES(symkey[:], buffer[1:mLen])
+		msg := crypt.DecryptAES(symkey[:], content)
 		fmt.Printf("[message] decrypted message: %s\n", msg)
 
 		sends := []byte{SERVER_MSG}
