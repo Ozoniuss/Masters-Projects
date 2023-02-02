@@ -5,23 +5,23 @@ import (
 	"time"
 )
 
-func generatePrimes(lower, upper uint64) (uint64, uint64) {
-	p := nextPrime(rand.Uint64()%(upper-lower) + lower)
-	q := nextPrime(rand.Uint64()%(upper-lower) + lower)
+func generatePrimes(lower, upper uint64) (*BigInt, *BigInt) {
+	p := nextPrime(fromInt(int64(rand.Uint64()%(upper-lower) + lower)))
+	q := nextPrime(fromInt(int64(rand.Uint64()%(upper-lower) + lower)))
 	if p == q {
 		q = nextPrime(q)
 	}
 	return p, q
 }
 
-func generateKeys(p, q uint64) (PrivateKey, PublicKey) {
-	n := p * q
-	e := uint64(3)
+func generateKeys(p, q *BigInt) (PrivateKey, PublicKey) {
+	n := p.mul(q)
+	e := fromInt(3)
 	for {
-		if gcd(p-1, e) == 1 && gcd(q-1, e) == 1 {
+		if gcd(p.prev(), e).compare(fromInt(1)) == 0 && gcd(q.prev(), e).compare(fromInt(1)) == 0 {
 			break
 		}
-		e += 2
+		e = e.next().next()
 	}
 	d := modularInverse(e, phi(n))
 	return PrivateKey{n, d}, PublicKey{n, e}
@@ -29,7 +29,7 @@ func generateKeys(p, q uint64) (PrivateKey, PublicKey) {
 
 func GenerateKeyPair() (PublicKey, PrivateKey) {
 	rand.Seed(time.Now().Unix())
-	bound := uint64(1 << 15)
+	bound := uint64(1 << 16)
 	p, q := generatePrimes(bound, bound*2)
 	priv, pub := generateKeys(p, q)
 	return pub, priv

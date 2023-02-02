@@ -3,59 +3,48 @@ package encryption
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 )
 
 type PrivateKey struct {
-	n, d uint64
-}
-
-func (p *PublicKey) Marshal() []byte {
-	return []byte(fmt.Sprintf("%d,%d", p.n, p.e))
-}
-
-func (p *PublicKey) Unmarshal(a []byte) error {
-	if _, err := fmt.Sscanf(string(a), "%d,%d", &p.n, &p.e); err != nil {
-		return err
-	}
-	return nil
+	n, d *BigInt
 }
 
 type PublicKey struct {
-	n, e uint64
+	n, e *BigInt
 }
 
-func (p *PrivateKey) Marshal() []byte {
-	return []byte(fmt.Sprintf("%d,%d", p.n, p.d))
-}
-
-func (p *PrivateKey) Unmarshal(a []byte) error {
-	if _, err := fmt.Sscanf(string(a), "%d,%d", &p.n, &p.d); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *PublicKey) encrypt(m uint64) uint64 {
+func (p *PublicKey) encrypt(m *BigInt) *BigInt {
 	return pow(m, p.e, p.n)
 }
 
 func (p *PublicKey) EncryptString(a []byte) string {
 	encryptedString := make([]byte, 0)
 	for i := 0; i < len(a); i++ {
-		currentPart := p.encrypt(uint64(a[i]))
-		for j := 0; j < 8; j++ {
-			encryptedString = append(encryptedString, uint8(currentPart&0xFF))
-			currentPart >>= 8
+		currentPart := p.encrypt(fromInt(int64(a[i])))
+		encryptedString = append(encryptedString, []byte(currentPart.String())...)
+		if i != len(a)-1 {
+			encryptedString = append(encryptedString, []byte(",")...)
 		}
 	}
 	return base64.StdEncoding.EncodeToString(encryptedString)
 }
 
 func (p *PublicKey) String() string {
-	return fmt.Sprintf("<%d, %d>", p.n, p.e)
+	return fmt.Sprintf("<%s, %s>", p.n.String(), p.e.String())
 }
 
-func (p *PrivateKey) decrypt(c uint64) uint64 {
+func (p *PublicKey) Marshal() []byte {
+	return []byte(fmt.Sprintf("%s,%s", p.n.String(), p.e.String()))
+}
+
+func (p *PublicKey) Unmarshal(a []byte) error {
+	l := strings.Split(string(a), ",")
+	p.n = fromString(l[0])
+	p.e = fromString(l[1])
+	return nil
+}
+func (p *PrivateKey) decrypt(c *BigInt) *BigInt {
 	return pow(c, p.d, p.n)
 }
 
@@ -64,18 +53,26 @@ func (p *PrivateKey) DecryptString(a string) []byte {
 	if err != nil {
 		panic(err)
 	}
+	splitStr := strings.Split(string(encryptedArray), ",")
 	decryptedString := make([]byte, 0)
-	for i := 0; i < len(encryptedArray); i += 8 {
-		currentPart := uint64(0)
-		for j := 7; j >= 0; j-- {
-			currentPart <<= 8
-			currentPart += uint64(encryptedArray[i+j])
-		}
-		decryptedString = append(decryptedString, byte(p.decrypt(currentPart)))
+	for i := 0; i < len(splitStr); i++ {
+		currentPart := p.decrypt(fromString(splitStr[i]))
+		decryptedString = append(decryptedString, byte(currentPart.toInt()))
 	}
 	return decryptedString
 }
 
 func (p *PrivateKey) String() string {
-	return fmt.Sprintf("<%d, %d>", p.n, p.d)
+	return fmt.Sprintf("<%s, %s>", p.n.String(), p.d.String())
+}
+
+func (p *PrivateKey) Marshal() []byte {
+	return []byte(fmt.Sprintf("%s,%s", p.n.String(), p.d.String()))
+}
+
+func (p *PrivateKey) Unmarshal(a []byte) error {
+	l := strings.Split(string(a), ",")
+	p.n = fromString(l[0])
+	p.d = fromString(l[1])
+	return nil
 }
