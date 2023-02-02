@@ -14,7 +14,7 @@ import (
 
 const (
 	SERVER_HOST = "localhost"
-	SERVER_PORT = "9987"
+	SERVER_PORT = "6699"
 	SERVER_TYPE = "tcp"
 )
 
@@ -65,8 +65,8 @@ func (state *ConnState) setSymKey(s [32]byte) error {
 	return nil
 }
 
-func (state *ConnState) getSymKey() [32]byte {
-	return *state.sym
+func (state *ConnState) getSymKey() *[32]byte {
+	return state.sym
 }
 
 func run() error {
@@ -169,6 +169,10 @@ func processMessage(connection net.Conn, state *ConnState) error {
 	case CLIENT_MSG:
 		fmt.Printf("[message] received encrypted message: %s\n", base64.URLEncoding.EncodeToString(content))
 		symkey := state.getSymKey()
+		if symkey == nil {
+			fmt.Println("error: client tried to send message without encryption")
+			break
+		}
 		msg := crypt.DecryptAES(symkey[:], content)
 		fmt.Printf("[message] decrypted message: %s\n", msg)
 

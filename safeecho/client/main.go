@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -15,7 +16,7 @@ import (
 
 const (
 	SERVER_HOST = "localhost"
-	SERVER_PORT = "9987"
+	SERVER_PORT = "6699"
 	SERVER_TYPE = "tcp"
 )
 
@@ -44,16 +45,13 @@ func newState() ConnState {
 	}
 }
 
-//	func readMessage() (byte, string) {
-//		var typ byte
-//		var msg string
-//		fmt.Scanf("%d:%s\n", &typ, &msg)
-//		return typ, msg
-//	}
 func readMessage() (byte, string) {
 	var msg string
 
-	fmt.Scanln(&msg)
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		msg = scanner.Text()
+	}
 
 	headerDelimPos := strings.Index(msg, ":")
 	if headerDelimPos == -1 {
