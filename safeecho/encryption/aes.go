@@ -8,41 +8,42 @@ import (
 )
 
 func EncryptAES(key []byte, plaintext []byte) []byte {
-	c, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err)
 	}
 
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		panic(err)
 	}
 
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		panic(err)
-	}
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
-	return gcm.Seal(nonce, nonce, plaintext, nil)
+	return ciphertext
 }
 
 func DecryptAES(key []byte, ciphertext []byte) []byte {
-	c, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err)
 	}
 
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		panic(err)
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	if len(ciphertext) < aes.BlockSize {
+		panic("ciphertext too short")
 	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
 
-	nonceSize := gcm.NonceSize()
-	if len(ciphertext) < nonceSize {
-		panic(err)
-	}
+	stream := cipher.NewCFBDecrypter(block, iv)
 
-	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
-	ret, _ := gcm.Open(nil, nonce, ciphertext, nil)
-	return ret
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(ciphertext, ciphertext)
+	return ciphertext
 }
