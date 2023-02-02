@@ -75,8 +75,19 @@ func writeMsg(typ byte, msg string, s *ConnState) []byte {
 }
 
 func main() {
+	scanner := bufio.NewScanner(os.Stdin)
+	address := ""
+	fmt.Print("please enter address: ")
+	if scanner.Scan() {
+		address = scanner.Text()
+	}
+
 	//establish connection
-	connection, err := net.Dial(SERVER_TYPE, SERVER_HOST+":"+SERVER_PORT)
+	if address == "" {
+		address = SERVER_HOST + ":" + SERVER_PORT
+	}
+
+	connection, err := net.Dial(SERVER_TYPE, address)
 	if err != nil {
 		panic(err)
 	}
@@ -116,9 +127,13 @@ func autoConnect(connection net.Conn, s *ConnState) {
 	}
 
 	// Generate symmetric key after client hello
+	fmt.Println("[server hello] received server hello")
+
 	pubKey := &crypt.PublicKey{}
 	pubKey.Unmarshal(content)
 	s.pubKey = pubKey
+
+	fmt.Printf("[server hello] public key is %+v\n", pubKey)
 
 	symKey := generateSymKey()
 	fmt.Printf("[server hello] generated sym key: %v\n", symKey)
@@ -142,7 +157,7 @@ func autoConnect(connection net.Conn, s *ConnState) {
 }
 
 func readFromServer(connection net.Conn) ([]byte, int, error) {
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 1024*1024)
 	mLen, err := connection.Read(buffer)
 	if err != nil {
 		return nil, 0, err

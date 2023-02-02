@@ -119,7 +119,7 @@ func processClient(connection net.Conn, state *ConnState) {
 }
 
 func processMessage(connection net.Conn, state *ConnState) error {
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 1024*1024)
 	mLen, err := connection.Read(buffer)
 	if err != nil {
 		return err
@@ -171,6 +171,12 @@ func processMessage(connection net.Conn, state *ConnState) error {
 		symkey := state.getSymKey()
 		if symkey == nil {
 			fmt.Println("error: client tried to send message without encryption")
+			break
+		}
+		if len(content) == 0 {
+			sends := []byte{ERROR}
+			sends = append(sends, []byte("there is no point in encrypting null messages")...)
+			connection.Write(sends)
 			break
 		}
 		msg := crypt.DecryptAES(symkey[:], content)
