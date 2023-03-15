@@ -44,3 +44,13 @@ go run client.go
 
 after which the simulation starts again. Proceed just like in previous example in the server terminal. Each client process will write the keys to the terminal, until all are written.
 
+Sample Runs
+-----------
+
+Single process, multiple threads:
+
+https://user-images.githubusercontent.com/56697671/225411416-55008bac-9b1b-4b45-8ef3-3dfed8f863ef.mp4
+
+Multiple processes:
+
+https://user-images.githubusercontent.com/56697671/225412094-9294bcb4-de3a-4874-bef0-cb219c6b8fbc.mp4
