@@ -47,9 +47,12 @@ const NO_JOBS = 10
 // 1.1, page 14.
 //
 // Implements JobHandler module, jh instance.
-func handleJobsAsynchronously(jobs []Job, submissions chan Job, confirmations [NO_JOBS]chan Job) {
+func handleJobsAsynchronously(submissions chan Job, confirmations [NO_JOBS]chan Job) {
 
 	fmt.Println("start asynchronous handler")
+
+	// upon event <jh, Init> do
+	processingJobs := make([]Job, 0, 10)
 
 	// The property JH1 is satisfied due to having an infinite for loop, and
 	// storing all jobs in a buffer. See remarks about infinite loop from
@@ -60,13 +63,13 @@ func handleJobsAsynchronously(jobs []Job, submissions chan Job, confirmations [N
 		// upon event  jh, Submit | job> do
 		case job := <-submissions:
 			fmt.Printf("received submission %d\n", job.id)
-			jobs = append(jobs, job)
+			processingJobs = append(processingJobs, job)
 			confirmations[job.id] <- job
 		// upon buffer <> ∅ do
 		default:
-			if len(jobs) != 0 {
-				j := jobs[0] // fifo selection
-				jobs = jobs[1:]
+			if len(processingJobs) != 0 {
+				j := processingJobs[0] // fifo selection
+				processingJobs = processingJobs[1:]
 				processJob(j)
 				fmt.Printf("job %d done\n", j.id)
 			}
@@ -95,16 +98,15 @@ func main() {
 	var confirmations [NO_JOBS]chan Job
 
 	// Init jobs and confirmation channels.
+
 	var jobs [NO_JOBS]Job
 	for i := 0; i < NO_JOBS; i++ {
 		jobs[i] = Job{id: i, duration: (i % 3) + 1}
 		confirmations[i] = make(chan Job)
 	}
 
-	processingJobs := make([]Job, 0, 10)
-
 	// Start synchronous job handler.
-	go handleJobsAsynchronously(processingJobs, submissions, confirmations)
+	go handleJobsAsynchronously(submissions, confirmations)
 
 	// This is only used to not exit the main goroutine only after the child
 	// goroutines complete.
