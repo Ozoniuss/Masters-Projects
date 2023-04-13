@@ -37,10 +37,10 @@ func (q *Queue) Add(msg *pb.Message) {
 }
 
 // AddWithMsg is similar to add, expect it prints a message to the screen.
-func (q *Queue) AddWithMsg(msg *pb.Message, logg log.Logger, show string) {
+func (q *Queue) AddWithMsg(msg *pb.Message, show string) {
 	q.mtx.Lock()
 	defer q.mtx.Unlock()
-	logg.Debug(show)
+	log.Println(show)
 	q.messages = append(q.messages, msg)
 }
 

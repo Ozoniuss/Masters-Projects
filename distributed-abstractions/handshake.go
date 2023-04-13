@@ -13,7 +13,7 @@ import (
 
 /*	Step 1 and 2 of sequence diagram*/
 
-func handshake(state *state.ProcState, logg *log.Logger, host string, listeningPort, index int) error {
+func handshake(state *state.ProcState, host string, listeningPort, index int) error {
 
 	d := net.Dialer{
 		LocalAddr: net.TCPAddrFromAddrPort(
@@ -55,7 +55,7 @@ func handshake(state *state.ProcState, logg *log.Logger, host string, listeningP
 		if err != nil {
 			return fmt.Errorf("could not send initialization message: %w", err)
 		}
-		logg.Infof("sent process registration: %d bytes", n)
+		log.Printf("sent process registration: %d bytes\n", n)
 	}
 
 	conn.Close()
@@ -90,7 +90,7 @@ func handshake(state *state.ProcState, logg *log.Logger, host string, listeningP
 	if m.GetType() != pb.Message_NETWORK_MESSAGE {
 		return fmt.Errorf("did not receive network message during initialization, got %v", m.GetType())
 	}
-	logg.Infof("got ProcInitializeSystem message: %+v\n", &m)
+	log.Printf("got ProcInitializeSystem message: %+v\n", &m)
 
 	msg := m.GetNetworkMessage().GetMessage()
 	if msg.GetType() != pb.Message_PROC_DESTROY_SYSTEM && msg.GetType() != pb.Message_PROC_INITIALIZE_SYSTEM {
@@ -110,7 +110,7 @@ func handshake(state *state.ProcState, logg *log.Logger, host string, listeningP
 		}
 	}
 
-	logg.Info("handshake complete")
+	log.Println("handshake complete")
 
 	return nil
 }

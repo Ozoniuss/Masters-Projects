@@ -1,0 +1,2 @@
+Network message is just a wrapper around a message. It should only store 
+network information, nothing more.

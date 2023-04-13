@@ -1,6 +1,7 @@
 package abstraction
 
 import (
+	"fmt"
 	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
@@ -10,28 +11,24 @@ import (
 type App struct {
 	state *procstate.ProcState
 	queue *queue.Queue
-	logg  log.Logger
 }
 
-func NewApp(state *procstate.ProcState, queue *queue.Queue, logg log.Logger) *App {
+func NewApp(state *procstate.ProcState, queue *queue.Queue) *App {
 	return &App{
 		state: state,
 		queue: queue,
-		logg:  logg,
 	}
 }
 
-func (app *App) Handle(msg *pb.Message) {
+func (app *App) Handle(msg *pb.Message) error {
 	if msg == nil {
-		app.logg.Error("app handler received nil message")
-		return
+		return fmt.Errorf("%s handler received nil message", APP)
 	}
+	log.Printf("[%s got message]: %+v\n\n", APP, msg)
 	switch msg.GetType() {
 
 	// When receiving an app_broadcast from the hub, start a beb broadcast.
 	case pb.Message_APP_BROADCAST:
-
-		app.logg.Infof("app got broadcast message: %+v", msg)
 
 		beb := pb.Message{
 			Type:              pb.Message_BEB_BROADCAST,
@@ -45,14 +42,39 @@ func (app *App) Handle(msg *pb.Message) {
 					AppValue: &pb.AppValue{
 						Value: msg.AppBroadcast.Value,
 					},
+
+					// ???
+					FromAbstractionId: "app",
+					ToAbstractionId:   "app",
 				},
 			},
 		}
 
 		trigger(app.state, app.queue, &beb)
 
+	case pb.Message_BEB_DELIVER:
+
+		// Send the message back to hub.
+		plsend := pb.Message{
+			Type:              pb.Message_PL_SEND,
+			FromAbstractionId: msg.GetToAbstractionId(),
+			ToAbstractionId:   APP_PL,
+			SystemId:          app.state.SystemId,
+			MessageUuid:       msg.GetMessageUuid(),
+			PlSend: &pb.PlSend{
+				Message: msg.GetBebDeliver().GetMessage(),
+				Destination: &pb.ProcessId{
+					Host:  "127.0.0.1",
+					Port:  5000,
+					Owner: "hub",
+				},
+			},
+		}
+		trigger(app.state, app.queue, &plsend)
+
 	case pb.Message_PL_DELIVER:
-		app.Handle(msg.PlDeliver.Message)
+		return app.Handle(msg.PlDeliver.Message)
 	}
 
+	return nil
 }

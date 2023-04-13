@@ -3,8 +3,6 @@ package state
 import (
 	"fmt"
 	pb "hw/protobuf"
-
-	log "hw/log"
 )
 
 type ProcState struct {
@@ -15,12 +13,10 @@ type ProcState struct {
 	Quit          chan struct{}
 	// The id of the system, as sent by the hub.
 	SystemId string
-	Logg     *log.Logger
 }
 
-func NewProcState(l *log.Logger) *ProcState {
+func NewProcState() *ProcState {
 	return &ProcState{
-		Logg: l,
 		Quit: make(chan struct{}, 1),
 	}
 }

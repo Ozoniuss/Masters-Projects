@@ -11,34 +11,43 @@ import (
 type QueueProcessor struct {
 	abstractions map[string]abstraction.Abstraction
 	stopc        chan struct{}
-	logg         log.Logger
 }
 
-func NewQueueProcessor(abstractions map[string]abstraction.Abstraction, logg log.Logger) *QueueProcessor {
+func NewQueueProcessor(abstractions map[string]abstraction.Abstraction) *QueueProcessor {
 	return &QueueProcessor{
 		abstractions: abstractions,
 		stopc:        make(chan struct{}, 1),
-		logg:         logg,
 	}
 }
 
 func (p *QueueProcessor) processMessage(msg *pb.Message) {
 
+	if msg == nil {
+		log.Printf("received nil message while processing\n\n")
+		p.Stop()
+	}
+
+	// log.Printf("processing message %+v\n\n", msg)
+
 	// The abstraction id that must process the message
-	aid := msg.ToAbstractionId
+	aid := msg.GetToAbstractionId()
 
 	if aid == "" {
-		p.logg.Errorf("message has no destination abstraction id")
+		log.Printf("message has no destination abstraction id\n\n")
 		return
 	}
 
 	abs, ok := p.abstractions[aid]
 	if !ok {
-		p.logg.Errorf("no handler registered for abstraction id: %s", aid)
+		log.Printf("no handler registered for abstraction id: %s\n\n", aid)
 		return
 	}
 
-	abs.Handle(msg)
+	err := abs.Handle(msg)
+	if err != nil {
+		log.Printf("received error while handling message: %s\n\n", err.Error())
+		p.Stop()
+	}
 }
 
 // Start starts the worker thread processing the messages. Can be stopped and
@@ -48,7 +57,7 @@ func (p *QueueProcessor) Start(queue *queue.Queue) {
 		for {
 			select {
 			case <-p.stopc:
-				p.logg.Info("queue stopped")
+				log.Printf("queue stopped\n\n")
 				return
 			default:
 				if queue.Len() == 0 {
@@ -57,7 +66,7 @@ func (p *QueueProcessor) Start(queue *queue.Queue) {
 					// //sugar.Infoln("Nothing is happening...")
 					// //time.Sleep(1 * time.Second)
 				} else {
-					p.logg.Trace("processing...")
+					// log.Printf("processing...\n\n")
 					// Get the message from top of queue.
 					msg := queue.Get()
 					// Process after reading from the queue since processing may trigger
@@ -65,7 +74,7 @@ func (p *QueueProcessor) Start(queue *queue.Queue) {
 					//
 					// Note that only one event can be processed at a time.
 					p.processMessage(msg)
-					p.logg.Trace("message processed")
+					// log.Printf("message processed\n\n")
 				}
 			}
 		}

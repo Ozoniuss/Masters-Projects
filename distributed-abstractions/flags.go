@@ -4,10 +4,10 @@ import (
 	"flag"
 )
 
-func initFlags(port, index *int) {
+func initFlags(port, index, loglevel *int) {
 
-	flag.IntVar(port, "p", 6000, "")
-	flag.IntVar(index, "i", 0, "")
+	flag.IntVar(port, "p", 6000, "listening port")
+	flag.IntVar(index, "i", 0, "process index")
 
 	flag.Parse()
 }
