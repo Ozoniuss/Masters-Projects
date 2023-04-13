@@ -102,7 +102,6 @@ func main() {
 	r := bufio.NewReader(os.Stdin)
 	for {
 		chrs, _, err := r.ReadLine()
-		fmt.Println("chars", chrs)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break

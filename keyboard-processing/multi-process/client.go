@@ -65,7 +65,7 @@ func processInput(id int, conn net.Conn) {
 			// reads it.
 			closed = true
 			if err != nil {
-				fmt.Println("\rclient closed")
+				fmt.Print("\rclient closed connection\n")
 				// format nicely
 				fmt.Printf("\rgot: %s", out)
 				break
