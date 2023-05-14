@@ -1,0 +1,45 @@
+{
+    "users": [
+        {
+            "name": "fast",
+            "password": "food",
+            "tags": [
+                "administrator"
+            ]
+        }
+    ],
+    "vhosts": [
+        {
+            "name": "fastfood"
+        }
+    ],
+    "permissions": [
+        {
+            "user": "fast",
+            "vhost": "fastfood",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        }
+    ],
+    "queues": [
+        {
+            "name": "orders",
+            "vhost": "fastfood",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-queue-type": "classic"
+            }
+        },
+        {
+            "name": "ready",
+            "vhost": "fastfood",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-queue-type": "classic"
+            }
+        }
+    ]
+}
