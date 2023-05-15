@@ -76,8 +76,9 @@ func worker(wid int, conn *amqp.Connection) {
 			oid := binary.BigEndian.Uint32(d.Body)
 
 			OrdersDB.ChangeOrderStatus(oid, orders.ORDER_PREPARING)
-			time.Sleep(1 * time.Second)
-			fmt.Printf("[worker %d] Order with id %v finished\n", wid, oid)
+			fmt.Printf("[worker %d] Started preparing order %d\n", wid, oid)
+			time.Sleep(10 * time.Second)
+			fmt.Printf("[worker %d] Order with id %d finished\n", wid, oid)
 
 			// Publish the finished order to the "ready" queue
 			err = ch.PublishWithContext(ctx, EXCHANGE,

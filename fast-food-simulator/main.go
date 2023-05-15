@@ -145,7 +145,6 @@ func handleTakeOrder(w http.ResponseWriter, r *http.Request) {
 func handleReady(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	fmt.Printf("got request: %+v", *r)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "text/event-stream")
