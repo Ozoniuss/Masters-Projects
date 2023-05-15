@@ -16,10 +16,24 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-var OrdersDB = orders.NewOrdersDB("orders.json")
+var OrdersDB orders.OrderDB
 var Counter = counter.NewCounter("count")
+var Updates chan string
 
 func main() {
+
+	// Flags for worker and waiter. Note that it is considered that the flag
+	// was not specified if either is 0, for simplicity.
+	//
+	// Specifying no worker flag (or having it set to 0) means workers would
+	// run in a different program, not a different thread. In that case
+	// updates cannot be sent through a channel, since the worker itself
+	// updates the database. Orders that are ready would be sent through a
+	// queue, which means we need to start a listener for that queue as well.
+	var workerno uint
+
+	flag.UintVar(&workerno, "workers", 0, "Specify number of workers")
+	flag.Parse()
 
 	// Since the entire application runs within a single connection, it is
 	// fine to share the connection. It is recommended that each thread creates
@@ -30,31 +44,19 @@ func main() {
 		panic(err)
 	}
 	defer conn.Close()
+	// Workers run in a different process, start the queue listener.
+	if workerno == 0 {
+		OrdersDB = orders.NewOrdersDB("orders.json", nil)
+		go waiter(conn)
 
-	// Flags for worker and waiter. Note that it is considered that the flag
-	// was not specified if either is 0, for simplicity.
-	//
-	// Specifying no worker flag (or having it set to 0) means workers would
-	// run in a different program, not a different thread.
-	var workerno, waiterno uint
-
-	flag.UintVar(&workerno, "worker", 0, "Specify number of workers")
-	flag.UintVar(&waiterno, "waiter", 2, "Specify number of waiters")
-
-	flag.Parse()
-
-	if waiterno == 0 {
-		panic("at least one waiter required")
-	}
-
-	for i := 0; i < int(workerno); i++ {
-		// Run two fast food workers
-		go worker(i, conn)
-	}
-
-	for i := 0; i < int(waiterno); i++ {
-		// Run one waiter.
-		go waiter(i, conn)
+		// Updates happen through channels.
+	} else {
+		Updates = make(chan string, 1000)
+		OrdersDB = orders.NewOrdersDB("orders.json", Updates)
+		for i := 0; i < int(workerno); i++ {
+			// Run two fast food workers
+			go worker(i, conn)
+		}
 	}
 
 	ch, err := conn.Channel()
@@ -105,6 +107,8 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 	var serialized []byte
 	serialized = binary.BigEndian.AppendUint32(serialized, oid)
 
+	fmt.Printf("[MAIN] Got request for order %d\n", oid)
+
 	err = ch.PublishWithContext(ctx,
 		EXCHANGE,
 		ORDER_QUEUE,
@@ -138,11 +142,11 @@ func handleTakeOrder(w http.ResponseWriter, r *http.Request) {
 	order, err := OrdersDB.TakeOrder(uint32(oid))
 	if err != nil {
 		switch {
-		case errors.Is(err, orders.OrderNotExists):
+		case errors.Is(err, orders.ErrOrderNotExists):
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Order %d does not exist.", uint32(oid))
 			return
-		case errors.Is(err, orders.OrderNotReady):
+		case errors.Is(err, orders.ErrOrderNotReady):
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "Order %d not ready yet.", uint32(oid))
 			return

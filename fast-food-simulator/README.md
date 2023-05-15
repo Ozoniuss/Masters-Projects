@@ -21,7 +21,7 @@ Real-time updates can be used in order to make a visual representation of the or
 
 RabbitMQ is used as the message broker which holds the orders. This is a well-established reliable message broker which enables message persistence during server failures, and delivery guarantees. If a worker fails during the processing of an order, the order is requeued (TODO: with a high priority).
 
-There are two ways to run this thing, either the simple way if you're lazy, or the complex way if you want to have separate processes for taking orders and preparing orders, which simulates more of a real-world scenario. The implementation differences are described below, see [Simple Example](#simple-example) and [Complex Example](#complex-example).
+There are two ways to run this thing, either the simple way if you're lazy, or the complex way if you want to have separate processes for taking orders and preparing orders, which simulates more of a real-world scenario. The implementation differences are described below, see [Simple Example](#simple-example) and [Complex Example](#complex-example). The main difference between the two is how order notifications are send, in the simple example through a channel and in the complex example through a queue. Note that orders are still placed in a queue in both cases, but in the simple example a channel would have sufficed for that (at the cost of reduced failure safety).
 
 Storing Orders
 --------------
@@ -34,7 +34,10 @@ Atomic Counter
 The atomic counter I did store in binary format, simply because it was easier to know that I always had to store exactly 4 bytes, and with a binary viewer extension you can see exactly what number you have in there. I stored it in Big Endian format.
 
 Simple Example
-----------------------
+--------------
 
 Complex Example
------------------------
+---------------
+
+Running
+-------

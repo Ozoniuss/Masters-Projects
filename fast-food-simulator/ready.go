@@ -9,7 +9,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func waiter(wid int, conn *amqp.Connection) {
+func waiter(conn *amqp.Connection) {
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -47,9 +47,9 @@ func waiter(wid int, conn *amqp.Connection) {
 	go func() {
 		for d := range msgs {
 			oid := binary.BigEndian.Uint32(d.Body)
-			fmt.Printf("[waiter %d] Pickued up order %d ready\n", wid, oid)
+			fmt.Printf("[waiter] Pickued up order %d ready\n", oid)
 			time.Sleep(2 * time.Second)
-			fmt.Printf("[waiter %d] Order with id %d ready\n", wid, oid)
+			fmt.Printf("[waiter] Order with id %d ready\n", oid)
 			OrdersDB.ChangeOrderStatus(oid, orders.ORDER_READY)
 			// Server-sent events notification
 			d.Ack(false)

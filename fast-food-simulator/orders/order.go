@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	OrderNotExists = errors.New("order does not exist")
-	OrderNotReady  = errors.New("order is not ready")
+	ErrOrderNotExists = errors.New("order does not exist")
+	ErrOrderNotReady  = errors.New("order is not ready")
 )
 
 type Order struct {
@@ -85,7 +85,9 @@ func (o *OrderDB) flush(w *lockedfile.File, orders Orders) {
 	if err != nil {
 		panic(err)
 	}
-	o.Updates <- string(data)
+	if o.Updates != nil {
+		o.Updates <- string(data)
+	}
 }
 
 func (o *OrderDB) String() string {
@@ -110,10 +112,10 @@ func (o *OrderDB) TakeOrder(oid uint32) (Order, error) {
 	defer f.Close()
 	retrieved, ok := orders[oid]
 	if !ok {
-		return Order{}, OrderNotExists
+		return Order{}, ErrOrderNotExists
 	}
 	if retrieved.Status != ORDER_READY {
-		return Order{}, OrderNotReady
+		return Order{}, ErrOrderNotReady
 	}
 	delete(orders, oid)
 	o.flush(f, orders)
@@ -130,9 +132,9 @@ func (o *OrderDB) ChangeOrderStatus(oid uint32, status string) {
 	o.flush(f, orders)
 }
 
-func NewOrdersDB(file string) OrderDB {
+func NewOrdersDB(file string, c chan string) OrderDB {
 	return OrderDB{
 		file:    file,
-		Updates: make(chan string, 1000),
+		Updates: c,
 	}
 }
