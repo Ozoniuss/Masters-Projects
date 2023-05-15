@@ -2,17 +2,13 @@ package main
 
 import (
 	"encoding/binary"
+	"fastfood/orders"
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func waiter(wid int) {
-	conn, err := amqp.Dial("amqp://fast:food@localhost:5672/fastfood")
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
+func waiter(wid int, conn *amqp.Connection) {
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -50,8 +46,8 @@ func waiter(wid int) {
 	go func() {
 		for d := range msgs {
 			oid := binary.BigEndian.Uint32(d.Body)
-			fmt.Printf("[waiter %d] Order with id %d ready\n", wid, oid)
-			Orders.ChangeOrderStatus(oid, ORDER_READY)
+			fmt.Printf("[waiter %d] Order with id %v ready\n", wid, oid)
+			OrdersDB.ChangeOrderStatus(oid, orders.ORDER_READY)
 			// Server-sent events notification
 			d.Ack(false)
 		}

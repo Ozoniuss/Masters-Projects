@@ -26,7 +26,7 @@
         {
             "name": "orders",
             "vhost": "fastfood",
-            "durable": true,
+            "durable": false,
             "auto_delete": false,
             "arguments": {
                 "x-queue-type": "classic"
@@ -35,7 +35,7 @@
         {
             "name": "ready",
             "vhost": "fastfood",
-            "durable": true,
+            "durable": false,
             "auto_delete": false,
             "arguments": {
                 "x-queue-type": "classic"

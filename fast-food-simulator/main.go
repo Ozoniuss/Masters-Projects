@@ -3,35 +3,44 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+
+	"fastfood/counter"
+	"fastfood/orders"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-var Orders = NewOrders()
-var Updates = make(chan string, 1000)
+var OrdersDB = orders.NewOrdersDB("orders.json")
+var Counter = counter.NewCounter("count")
 
 func main() {
 
 	fmt.Println("23")
 
-	for i := 0; i < 2; i++ {
-		// Run two fast food workers
-		go worker(i)
-	}
-
-	for i := 0; i < 2; i++ {
-		// Run one waiter.
-		go waiter(i)
-	}
-
+	// Since the entire application runs within a single connection, it is
+	// fine to share the connection. It is recommended that each thread creates
+	// its own channel to communicate with the broker, even is sharing the
+	// connection.
 	conn, err := amqp.Dial("amqp://fast:food@localhost:5672/fastfood")
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
+
+	for i := 0; i < 2; i++ {
+		// Run two fast food workers
+		go worker(i, conn)
+	}
+
+	for i := 0; i < 2; i++ {
+		// Run one waiter.
+		go waiter(i, conn)
+	}
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -59,6 +68,7 @@ func main() {
 		handleOrder(w, r, ctx, ch)
 	})
 	mux.HandleFunc("/ready", handleReady)
+	mux.HandleFunc("/take", handleTakeOrder)
 	http.ListenAndServe(":7777", mux)
 }
 
@@ -68,9 +78,14 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 		http.Error(w, fmt.Sprintf("could not read body: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
-	fmt.Println(body)
 
-	oid := Orders.addOrder(string(body))
+	oid := Counter.Inc()
+	order := orders.Order{
+		Id:      oid,
+		Status:  orders.ORDER_TAKEN,
+		Content: string(body),
+	}
+	OrdersDB.AddOrder(order)
 
 	var serialized []byte
 	serialized = binary.BigEndian.AppendUint32(serialized, oid)
@@ -92,7 +107,39 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 		panic("publishing failed")
 	}
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "order number: %d", oid)
+	fmt.Fprintf(w, "order number: %v", oid)
+}
+
+func handleTakeOrder(w http.ResponseWriter, r *http.Request) {
+
+	oidStr := r.URL.Query().Get("order")
+	oid, err := strconv.ParseInt(oidStr, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invalid order number: %s", oidStr)
+		return
+	}
+
+	order, err := OrdersDB.TakeOrder(uint32(oid))
+	if err != nil {
+		switch {
+		case errors.Is(err, orders.OrderNotExists):
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "Order %d does not exist.", uint32(oid))
+			return
+		case errors.Is(err, orders.OrderNotReady):
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Order %d not ready yet.", uint32(oid))
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte{':', '('})
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "serving: %s", order.Content)
 }
 
 func handleReady(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +160,7 @@ func handleReady(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Listening for orders...\n")
 	f.Flush()
 
-	io.WriteString(w, Orders.String())
+	io.WriteString(w, OrdersDB.String())
 	w.Write([]byte{'\n'})
 	f.Flush()
 
@@ -122,7 +169,7 @@ func handleReady(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			fmt.Println("closed")
 			return
-		case u := <-Updates:
+		case u := <-OrdersDB.Updates:
 			io.WriteString(w, u)
 			w.Write([]byte{'\n'})
 			f.Flush()
