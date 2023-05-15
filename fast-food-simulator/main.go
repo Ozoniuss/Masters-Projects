@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,12 +33,28 @@ func main() {
 	}
 	defer conn.Close()
 
-	for i := 0; i < 2; i++ {
+	// Flags for worker and waiter. Note that it is considered that the flag
+	// was not specified if either is 0, for simplicity.
+	//
+	// Specifying no worker flag (or having it set to 0) means workers would
+	// run in a different program, not a different thread.
+	var workerno, waiterno uint
+
+	flag.UintVar(&workerno, "worker", 0, "Specify number of workers")
+	flag.UintVar(&waiterno, "waiter", 2, "Specify number of waiters")
+
+	flag.Parse()
+
+	if waiterno == 0 {
+		panic("at least one waiter required")
+	}
+
+	for i := 0; i < int(workerno); i++ {
 		// Run two fast food workers
 		go worker(i, conn)
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < int(waiterno); i++ {
 		// Run one waiter.
 		go waiter(i, conn)
 	}
