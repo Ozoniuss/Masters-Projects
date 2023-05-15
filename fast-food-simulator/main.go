@@ -21,8 +21,6 @@ var Counter = counter.NewCounter("count")
 
 func main() {
 
-	fmt.Println("23")
-
 	// Since the entire application runs within a single connection, it is
 	// fine to share the connection. It is recommended that each thread creates
 	// its own channel to communicate with the broker, even is sharing the
@@ -84,7 +82,7 @@ func main() {
 	mux.HandleFunc("/order", func(w http.ResponseWriter, r *http.Request) {
 		handleOrder(w, r, ctx, ch)
 	})
-	mux.HandleFunc("/ready", handleReady)
+	mux.HandleFunc("/updates", handleUpdates)
 	mux.HandleFunc("/take", handleTakeOrder)
 	http.ListenAndServe(":7777", mux)
 }
@@ -159,7 +157,7 @@ func handleTakeOrder(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "serving: %s", order.Content)
 }
 
-func handleReady(w http.ResponseWriter, r *http.Request) {
+func handleUpdates(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
