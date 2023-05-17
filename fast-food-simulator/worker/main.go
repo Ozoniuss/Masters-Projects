@@ -25,7 +25,7 @@ func main() {
 
 	var workerno uint
 
-	flag.UintVar(&workerno, "workers", 0, "Specify number of workers")
+	flag.UintVar(&workerno, "id", 0, "Specify the worker id")
 	flag.Parse()
 	fmt.Printf("[worker %d] Initializing worker...\n", workerno)
 

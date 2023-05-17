@@ -19,9 +19,14 @@ Ticket numbers are generated for simplicity in increasing order. See [Atomic Cou
 
 Real-time updates can be used in order to make a visual representation of the order status, similar to the panels from real fast food restaurants. To get real-time notifications, call the endpoint `/updates` which will send all orders with their statuses whenever something changes through _Server-Sent Events_.
 
-RabbitMQ is used as the message broker which holds the orders. This is a well-established reliable message broker which enables message persistence during server failures, and delivery guarantees. If a worker fails during the processing of an order, the order is requeued (TODO: with a high priority).
+There are two ways to run this thing, either the simple way if you're lazy, or the complex way if you want to have separate processes for taking orders and preparing orders, which simulates more of a real-world scenario. The implementation differences are described below, see [Message Broker](#message-broker). The main difference between the two is how finished order notifications are send, in the single program example through a channel and in the multi-process example through a queue. Note that orders are still placed in a queue in both cases, but in the simple example a channel would have sufficed for that (at the cost of reduced failure safety).
 
-There are two ways to run this thing, either the simple way if you're lazy, or the complex way if you want to have separate processes for taking orders and preparing orders, which simulates more of a real-world scenario. The implementation differences are described below, see [Simple Example](#simple-example) and [Complex Example](#complex-example). The main difference between the two is how order notifications are send, in the simple example through a channel and in the complex example through a queue. Note that orders are still placed in a queue in both cases, but in the simple example a channel would have sufficed for that (at the cost of reduced failure safety).
+Message Broker
+--------------
+
+RabbitMQ is used as the message broker which holds the orders. This is a well-established reliable message broker which enables message persistence during server failures, and delivery guarantees. Publisher Confirms is the mechanism used to ensure that the orders have reached the broker, and custom acknowledgemnts are used both on the worker and server side to ensure safety if the program crashes while processing an order. For exampl, if a worker fails during the processing of an order, the order is requeued (TODO: with a high priority).
+
+There are two main queues, the orders queue and the ready queue. The orders queue servers as the main queue for placing new orders, and in the multi-process example, the ready queue is used by the workers to notify that an order had been finished, since worker processes don't have direct access to the database.
 
 Storing Orders
 --------------
@@ -33,11 +38,75 @@ Atomic Counter
 
 The atomic counter I did store in binary format, simply because it was easier to know that I always had to store exactly 4 bytes, and with a binary viewer extension you can see exactly what number you have in there. I stored it in Big Endian format.
 
-Simple Example
+Running Single Program Example
 --------------
 
-Complex Example
+Start the broker with 
+
+```
+docker compose up
+```
+
+Then run the main program with a specified number of workers that is not 0:
+
+```
+go run *.go --workers 2
+```
+
+Send a request to place an order:
+
+```
+curl -X POST -d "pizza" http://localhost:7777/order
+```
+
+This will give you back an order ticket with a number. Retrieve an order once it's ready:
+
+```
+curl -X POST http://localhost:7777/take?order=1
+```
+
+Listen to order updates (GUI comming soon):
+
+```
+curl http://localhost:7777/updates
+```
+
+Running Multiple Program Example
 ---------------
 
-Running
--------
+
+Start the broker with 
+
+```
+docker compose up
+```
+
+Then run the main program with no workers:
+
+```
+go run *.go
+```
+
+Run as much workers as you'd like from the [worker](./worker/) directory, ideally with different ids for better logs:
+
+```
+go run main.o -id 1
+```
+
+Send a request to place an order:
+
+```
+curl -X POST -d "pizza" http://localhost:7777/order
+```
+
+This will give you back an order ticket with a number. Retrieve an order once it's ready:
+
+```
+curl -X POST http://localhost:7777/take?order=1
+```
+
+Listen to order updates (GUI comming soon):
+
+```
+curl http://localhost:7777/updates
+```
