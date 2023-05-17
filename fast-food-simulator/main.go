@@ -65,6 +65,10 @@ func main() {
 	}
 	defer ch.Close()
 
+	// Put the channel in confirm mode, so that the broker notifies when
+	// messages have been received.
+	ch.Confirm(false)
+
 	_, err = ch.QueueDeclare(
 		ORDER_QUEUE, // name
 		true,        // durable
@@ -97,19 +101,12 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 	}
 
 	oid := Counter.Inc()
-	order := orders.Order{
-		Id:      oid,
-		Status:  orders.ORDER_TAKEN,
-		Content: string(body),
-	}
-	OrdersDB.AddOrder(order)
+	fmt.Printf("[MAIN] Got request for order %d...\n", oid)
 
 	var serialized []byte
 	serialized = binary.BigEndian.AppendUint32(serialized, oid)
 
-	fmt.Printf("[MAIN] Got request for order %d\n", oid)
-
-	err = ch.PublishWithContext(ctx,
+	confirmation, err := ch.PublishWithDeferredConfirmWithContext(ctx,
 		EXCHANGE,
 		ORDER_QUEUE,
 		false,
@@ -120,11 +117,27 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 			Body:         serialized,
 		},
 	)
-
-	// TODO: nicer error handling
 	if err != nil {
-		panic("publishing failed")
+		fmt.Printf("[MAIN] Order %d failed.\n", oid)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Your order has failed, please make a new order."))
 	}
+	ok, err := confirmation.WaitContext(ctx)
+	if !ok || (err != nil) {
+		fmt.Printf("[MAIN] Order %d failed.\n", oid)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Your order has failed, please make a new order."))
+	}
+
+	// Once we know the order is in the queue, add it to the DB which will send
+	// an SSE notificaiton with the updated orders list.
+	order := orders.Order{
+		Id:      oid,
+		Status:  orders.ORDER_TAKEN,
+		Content: string(body),
+	}
+	OrdersDB.AddOrder(order)
+
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "order number: %v", oid)
 }

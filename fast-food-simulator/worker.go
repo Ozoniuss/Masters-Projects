@@ -65,19 +65,6 @@ func worker(wid int, conn *amqp.Connection) {
 			fmt.Printf("[worker %d] Order with id %d finished\n", wid, oid)
 			OrdersDB.ChangeOrderStatus(oid, orders.ORDER_READY)
 
-			// Publish the finished order to the "ready" queue
-			// err = ch.PublishWithContext(ctx, EXCHANGE,
-			// 	READY_QUEUE,
-			// 	false,
-			// 	false,
-			// 	amqp.Publishing{
-			// 		DeliveryMode: amqp.Persistent,
-			// 		ContentType:  "text/plain",
-			// 		Body:         d.Body,
-			// 	})
-			// if err != nil {
-			// 	panic(err)
-			// }
 			d.Ack(false)
 		}
 	}()
