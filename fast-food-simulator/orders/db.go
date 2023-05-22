@@ -79,14 +79,10 @@ func (o *OrderDB) flush(w *lockedfile.File, orders Orders) {
 	}
 }
 
-func (o *OrderDB) String() string {
+func (o *OrderDB) List() Orders {
 	f, orders := o.open()
 	defer f.Close()
-	data, err := json.MarshalIndent(orders, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return string(data)
+	return orders
 }
 
 func (o *OrderDB) AddOrder(order Order) {

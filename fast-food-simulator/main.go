@@ -14,11 +14,12 @@ import (
 	"fastfood/orders"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/cors"
 )
 
 var OrdersDB orders.OrderDB
 var Counter = counter.NewCounter("count")
-var Updates chan string
+var Updates chan orders.Orders
 var workerno uint
 
 func main() {
@@ -44,7 +45,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	Updates = make(chan string, 1000)
+	Updates = make(chan orders.Orders, 1000)
 	OrdersDB = orders.NewOrdersDB("orders.json", Updates)
 
 	// Workers run in a different process, start the queue listener.
@@ -84,12 +85,23 @@ func main() {
 	defer cancel()
 
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("/order", func(w http.ResponseWriter, r *http.Request) {
 		handleOrder(w, r, ctx, ch)
 	})
 	mux.HandleFunc("/updates", handleUpdates)
 	mux.HandleFunc("/take", handleTakeOrder)
-	http.ListenAndServe(":7777", mux)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"}, // Allow requests from any origin
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders: []string{"Origin", "X-Requested-With", "Content-Type", "Accept"},
+	})
+
+	// Wrap existing HTTP handler with the CORS handler
+	handler := c.Handler(mux)
+
+	http.ListenAndServe(":7777", handler)
 }
 
 func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch *amqp.Channel) {
@@ -213,11 +225,9 @@ func handleUpdates(w http.ResponseWriter, r *http.Request) {
 		panic("could not convert to flusher")
 	}
 
-	io.WriteString(w, "Listening for orders...\n")
-	f.Flush()
+	orders := OrdersDB.List()
 
-	io.WriteString(w, OrdersDB.String())
-	w.Write([]byte{'\n'})
+	fmt.Fprintf(w, "data: %s\n\n", orders)
 	f.Flush()
 
 	for {
@@ -225,8 +235,8 @@ func handleUpdates(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case u := <-OrdersDB.Updates:
-			io.WriteString(w, u)
-			w.Write([]byte{'\n'})
+			fmt.Println(u.StringFormat())
+			fmt.Fprintf(w, "data: %s\n\n", u)
 			f.Flush()
 		}
 	}
