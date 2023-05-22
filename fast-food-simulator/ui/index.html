@@ -1,0 +1,114 @@
+<!-- code by @mgmariag (https://github.com/mgmariag)-->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Fast Food Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .order-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .order-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .order-item .content {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .order-item .status {
+            font-style: italic;
+        }
+
+        .status-taken {
+            color: black;
+        }
+
+        .status-preparing {
+            color: red;
+        }
+
+        .status-ready {
+            color: green;
+            border-left: 5px solid green;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .button-container button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+        }
+
+        .container .content {
+            flex: 1;
+        }
+
+        .container #orderInput {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-left: 20px;
+            width: 200px;
+            font-size: 16px;
+
+        }
+
+        .container #takeOrderButton {
+            padding: 5px 10px;
+            margin-right: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Fast Food Simulator</h1>
+    <ul id="ordersList" class="order-list">
+    </ul>
+
+    <div class="button-container">
+        <button id="placeOrderButton">Place New Order</button>
+        <input type="text" id="orderInput" placeholder="Enter order">
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./main.js"></script>
+</body>
+
+</html>
