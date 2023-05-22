@@ -25,7 +25,7 @@ func main() {
 
 	var workerno uint
 
-	flag.UintVar(&workerno, "id", 0, "Specify the worker id")
+	flag.UintVar(&workerno, "id", 0, "Specify the worker id.")
 	flag.Parse()
 	fmt.Printf("[worker %d] Initializing worker...\n", workerno)
 
@@ -104,6 +104,19 @@ func main() {
 			oid := binary.BigEndian.Uint32(d.Body)
 
 			fmt.Printf("[worker %d] Started preparing order %d\n", workerno, oid)
+
+			// Notify that you started preparing the order.
+			ch.PublishWithContext(ctx,
+				EXCHANGE,
+				READY_QUEUE,
+				false,
+				false,
+				amqp.Publishing{
+					DeliveryMode: amqp.Persistent,
+					ContentType:  "text/plain",
+					Body:         append(d.Body, 0),
+				})
+
 			time.Sleep(10 * time.Second)
 			fmt.Printf("[worker %d] Order with id %d finished\n", workerno, oid)
 
@@ -115,9 +128,10 @@ func main() {
 				amqp.Publishing{
 					DeliveryMode: amqp.Persistent,
 					ContentType:  "text/plain",
-					Body:         d.Body,
+					Body:         append(d.Body, 1),
 				})
 			if err != nil {
+				// TODO: notify about the status back
 				panic(err)
 			}
 			ok, err := confirmation.WaitContext(ctx)

@@ -107,6 +107,15 @@ func (o *OrderDB) AddOrder(order Order) {
 	o.flush(f, orders)
 }
 
+// RemoveOrder removes the order if it exists, or does nothing if it doesn't
+// exist.
+func (o *OrderDB) RemoveOrder(oid uint32) {
+	f, orders := o.openfile()
+	defer f.Close()
+	delete(orders, oid)
+	o.flush(f, orders)
+}
+
 func (o *OrderDB) TakeOrder(oid uint32) (Order, error) {
 	f, orders := o.openfile()
 	defer f.Close()

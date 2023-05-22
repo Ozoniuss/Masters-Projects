@@ -19,6 +19,7 @@ import (
 var OrdersDB orders.OrderDB
 var Counter = counter.NewCounter("count")
 var Updates chan string
+var workerno uint
 
 func main() {
 
@@ -30,8 +31,6 @@ func main() {
 	// updates cannot be sent through a channel, since the worker itself
 	// updates the database. Orders that are ready would be sent through a
 	// queue, which means we need to start a listener for that queue as well.
-	var workerno uint
-
 	flag.UintVar(&workerno, "workers", 0, "Specify number of workers")
 	flag.Parse()
 
@@ -44,15 +43,15 @@ func main() {
 		panic(err)
 	}
 	defer conn.Close()
+
+	Updates = make(chan string, 1000)
+	OrdersDB = orders.NewOrdersDB("orders.json", Updates)
+
 	// Workers run in a different process, start the queue listener.
 	if workerno == 0 {
-		OrdersDB = orders.NewOrdersDB("orders.json", nil)
 		go waiter(conn)
-
 		// Updates happen through channels.
 	} else {
-		Updates = make(chan string, 1000)
-		OrdersDB = orders.NewOrdersDB("orders.json", Updates)
 		for i := 0; i < int(workerno); i++ {
 			// Run two fast food workers
 			go worker(i, conn)
@@ -106,6 +105,38 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 	var serialized []byte
 	serialized = binary.BigEndian.AppendUint32(serialized, oid)
 
+	order := orders.Order{
+		Id:      oid,
+		Status:  orders.ORDER_TAKEN,
+		Content: string(body),
+	}
+	// Add the order to the database.
+	OrdersDB.AddOrder(order)
+
+	// The workers take care of updating the database.
+	if workerno != 0 {
+		err := ch.PublishWithContext(ctx,
+			EXCHANGE,
+			ORDER_QUEUE,
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "text/plain",
+				Body:         serialized,
+			},
+		)
+		if err != nil {
+			OrdersDB.RemoveOrder(oid)
+			fmt.Printf("[MAIN] Order %d failed.\n", oid)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Your order has failed, please make a new order."))
+		}
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintf(w, "order number: %v", oid)
+		return
+	}
+
 	confirmation, err := ch.PublishWithDeferredConfirmWithContext(ctx,
 		EXCHANGE,
 		ORDER_QUEUE,
@@ -117,26 +148,20 @@ func handleOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, ch
 			Body:         serialized,
 		},
 	)
+
 	if err != nil {
+		OrdersDB.RemoveOrder(oid)
 		fmt.Printf("[MAIN] Order %d failed.\n", oid)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Your order has failed, please make a new order."))
 	}
 	ok, err := confirmation.WaitContext(ctx)
 	if !ok || (err != nil) {
+		OrdersDB.RemoveOrder(oid)
 		fmt.Printf("[MAIN] Order %d failed.\n", oid)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Your order has failed, please make a new order."))
 	}
-
-	// Once we know the order is in the queue, add it to the DB which will send
-	// an SSE notificaiton with the updated orders list.
-	order := orders.Order{
-		Id:      oid,
-		Status:  orders.ORDER_TAKEN,
-		Content: string(body),
-	}
-	OrdersDB.AddOrder(order)
 
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "order number: %v", oid)
@@ -198,7 +223,6 @@ func handleUpdates(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("closed")
 			return
 		case u := <-OrdersDB.Updates:
 			io.WriteString(w, u)
