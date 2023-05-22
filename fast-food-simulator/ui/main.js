@@ -1,5 +1,4 @@
 $(document).ready(function () {
-    console.log("redi pula")
     // Initial request to load existing orders
     establishSSEConnection();
 
@@ -24,7 +23,7 @@ $(document).ready(function () {
         const orders = JSON.parse(data)
 
         // Get the keys and sort them
-        const keys = Object.keys(orders).sort();
+        const keys = Object.keys(orders).sort((a, b) => Number(a) - Number(b));
 
         // Create an array to hold the values
         const orderedValues = [];
