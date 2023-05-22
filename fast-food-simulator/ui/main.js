@@ -14,10 +14,6 @@ $(document).ready(function () {
 
     function establishSSEConnection() {
         const evtSource = new EventSource("http://localhost:7777/updates");
-        console.log("getting to messigi")
-        evtSource.onopen = (event) => {
-            console.log("opened", event)
-        }
         evtSource.onmessage = (event) => {
             displayOrders(event.data)
         }
@@ -37,9 +33,6 @@ $(document).ready(function () {
         for (const key of keys) {
             orderedValues.push(orders[key]);
         }
-
-        // Output the ordered values array
-        console.log("values", orderedValues);
 
         var ordersList = $('#ordersList');
 
