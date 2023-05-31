@@ -40,6 +40,11 @@ func run() error {
 	mux.HandleFunc("/order", func(w http.ResponseWriter, r *http.Request) {
 		handlePlaceOrder(w, r, ctx, db, sender)
 	})
+	mux.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
+		handleListOrders(w, r, ctx, db)
+	})
+
+	fmt.Println("[server] starting server...")
 
 	return http.ListenAndServe(":5566", mux)
 }

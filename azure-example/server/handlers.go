@@ -4,6 +4,7 @@ import (
 	"azdemo/pgdb"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,13 +26,27 @@ func handleTakeOrder(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	var o pgdb.Order
 
-	err = db.Clauses(clause.Returning{Columns: []clause.Column{{Name: "id"}}}).Where("id = ?", oid).Delete(&o).Error
+	// No need for transaction because status is only updated once.
+
+	err = db.Where("id = ?", oid).First(&o).Error
+	if err != nil {
+		http.Error(w, fmt.Sprintf("order %d does not exist", oid), http.StatusNotFound)
+		return
+	}
+
+	if o.Status == pgdb.PREPARING {
+		http.Error(w, fmt.Sprintf("order %d is still preparing", oid), http.StatusForbidden)
+		return
+	}
+
+	err = db.Where("id = ?", oid).Delete(&o).Error
 	if err != nil {
 		http.Error(w, fmt.Sprintf("could not take order: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "here is your order: %s", o.Content)
 }
 func handlePlaceOrder(w http.ResponseWriter, r *http.Request, ctx context.Context, db *gorm.DB, sender *azservicebus.Sender) {
 	body, err := io.ReadAll(r.Body)
@@ -66,4 +81,23 @@ func handlePlaceOrder(w http.ResponseWriter, r *http.Request, ctx context.Contex
 
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "order number: %d", o.ID)
+}
+
+func handleListOrders(w http.ResponseWriter, r *http.Request, ctx context.Context, db *gorm.DB) {
+	o := make([]pgdb.Order, 10)
+	err := db.Find(&o).Error
+	if err != nil {
+		http.Error(w, "could not list orders", http.StatusInternalServerError)
+		return
+	}
+
+	allOrders, err := json.MarshalIndent(o, "", " ")
+	if err != nil {
+		fmt.Printf("error marshalling orders: %s\n", err.Error())
+		http.Error(w, "an error occured", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(allOrders)
 }

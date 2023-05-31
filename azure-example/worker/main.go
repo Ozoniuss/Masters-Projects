@@ -33,6 +33,8 @@ func run() error {
 	}
 	defer receiver.Close(ctx)
 
+	fmt.Println("[worker] listening for messages")
+
 	for {
 		messages, err := receiver.ReceiveMessages(ctx, 1, nil)
 		if err != nil {

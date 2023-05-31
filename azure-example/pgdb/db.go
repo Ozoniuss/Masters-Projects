@@ -23,8 +23,9 @@ func Connect() (*gorm.DB, error) {
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
 	name := os.Getenv("DB_NAME")
+	connstr := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", user, password, host, port, name)
 	conn, err := gorm.Open(postgres.Open(
-		fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", user, password, host, port, name),
+		connstr,
 	))
 	return conn, err
 }
