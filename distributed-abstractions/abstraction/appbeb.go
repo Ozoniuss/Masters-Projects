@@ -9,24 +9,26 @@ import (
 )
 
 type AppBeb struct {
-	state *procstate.ProcState
-	queue *queue.Queue
+	state         *procstate.ProcState
+	queue         *queue.Queue
+	abstractionId string
 }
 
-func NewAppBeb(state *procstate.ProcState, queue *queue.Queue) *AppBeb {
+func NewAppBeb(state *procstate.ProcState, queue *queue.Queue, abstractionId string) *AppBeb {
 	return &AppBeb{
-		state: state,
-		queue: queue,
+		state:         state,
+		queue:         queue,
+		abstractionId: abstractionId,
 	}
 }
 
 func (appbeb *AppBeb) Handle(msg *pb.Message) error {
 
 	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", APP_BEB)
+		return fmt.Errorf("%s handler received nil message", appbeb.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", APP_BEB, msg)
+	log.Printf("%s got message: %+v\n\n", appbeb.abstractionId, msg)
 
 	switch msg.GetType() {
 
@@ -38,7 +40,7 @@ func (appbeb *AppBeb) Handle(msg *pb.Message) error {
 			plsend := pb.Message{
 				Type:              pb.Message_PL_SEND,
 				FromAbstractionId: msg.GetToAbstractionId(),
-				ToAbstractionId:   APP_BEB_PL,
+				ToAbstractionId:   Next(appbeb.abstractionId, "pl"),
 				SystemId:          appbeb.state.SystemId,
 				MessageUuid:       msg.GetMessageUuid(),
 				PlSend: &pb.PlSend{
@@ -55,7 +57,7 @@ func (appbeb *AppBeb) Handle(msg *pb.Message) error {
 		bebdeliver := pb.Message{
 			Type:              pb.Message_BEB_DELIVER,
 			FromAbstractionId: msg.GetToAbstractionId(),
-			ToAbstractionId:   APP,
+			ToAbstractionId:   Previous(msg.GetToAbstractionId()),
 			SystemId:          appbeb.state.SystemId,
 			MessageUuid:       msg.GetMessageUuid(),
 			BebDeliver: &pb.BebDeliver{

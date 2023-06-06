@@ -170,33 +170,47 @@ func (pl *Pl) ReadSocket(lis net.Listener) error {
 		// the actual receiver of this message over the network. The
 		// "toAbsractionId" inside the network message indicates the
 		// layer where the message was actually destined to go.
-		if msg.GetToAbstractionId() == APP_PL {
-			deliver := pb.Message{
-				Type:              pb.Message_PL_DELIVER,
-				FromAbstractionId: APP_PL,
-				ToAbstractionId:   msg.GetNetworkMessage().GetMessage().GetToAbstractionId(),
-				SystemId:          msg.GetSystemId(),
-				PlDeliver: &pb.PlDeliver{
-					Message: msg.GetNetworkMessage().GetMessage(),
-				},
-			}
-			// Trigger a perfect link deliver.
-			trigger(pl.state, pl.queue, &deliver)
-		} else if msg.GetToAbstractionId() == APP_BEB_PL {
-			deliver := pb.Message{
-				Type:              pb.Message_PL_DELIVER,
-				FromAbstractionId: APP_BEB_PL,
-				ToAbstractionId:   APP_BEB,
-				PlDeliver: &pb.PlDeliver{
-					Message: msg.NetworkMessage.Message,
-				},
-			}
-			// Trigger a perfect link deliver.
-			trigger(pl.state, pl.queue, &deliver)
-		} else {
-			log.Printf("received network message that doesn't go to perfect link, but to %v\n\n", msg.GetToAbstractionId())
-			pl.state.Quit <- struct{}{}
+
+		deliver := pb.Message{
+			Type: pb.Message_PL_DELIVER,
+			// ToAbstractionId of the network message tells which pl gets the
+			// message
+			FromAbstractionId: msg.GetToAbstractionId(),
+			ToAbstractionId:   Previous(msg.GetToAbstractionId()),
+			SystemId:          msg.GetSystemId(),
+			PlDeliver: &pb.PlDeliver{
+				Message: msg.GetNetworkMessage().GetMessage(),
+			},
 		}
+		trigger(pl.state, pl.queue, &deliver)
+
+		// if msg.GetToAbstractionId() == APP_PL {
+		// 	deliver := pb.Message{
+		// 		Type:              pb.Message_PL_DELIVER,
+		// 		FromAbstractionId: APP_PL,
+		// 		ToAbstractionId:   msg.GetNetworkMessage().GetMessage().GetToAbstractionId(),
+		// 		SystemId:          msg.GetSystemId(),
+		// 		PlDeliver: &pb.PlDeliver{
+		// 			Message: msg.GetNetworkMessage().GetMessage(),
+		// 		},
+		// 	}
+		// 	// Trigger a perfect link deliver.
+		// 	trigger(pl.state, pl.queue, &deliver)
+		// } else if msg.GetToAbstractionId() == APP_BEB_PL {
+		// 	deliver := pb.Message{
+		// 		Type:              pb.Message_PL_DELIVER,
+		// 		FromAbstractionId: APP_BEB_PL,
+		// 		ToAbstractionId:   APP_BEB,
+		// 		PlDeliver: &pb.PlDeliver{
+		// 			Message: msg.NetworkMessage.Message,
+		// 		},
+		// 	}
+		// 	// Trigger a perfect link deliver.
+		// 	trigger(pl.state, pl.queue, &deliver)
+		// } else {
+		// 	log.Printf("received network message that doesn't go to perfect link, but to %v\n\n", msg.GetToAbstractionId())
+		// 	pl.state.Quit <- struct{}{}
+		// }
 
 		client.Close()
 	}

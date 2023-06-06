@@ -27,6 +27,19 @@ func (app *App) Handle(msg *pb.Message) error {
 	log.Printf("[%s got message]: %+v\n\n", APP, msg)
 	switch msg.GetType() {
 
+	// Hub sends an APP_WRITE when attempting to write to the register.
+	case pb.Message_APP_WRITE:
+		registerId := msg.GetAppWrite().GetRegister()
+		nnarWrite := pb.Message{
+			Type:              pb.Message_NNAR_READ,
+			FromAbstractionId: msg.ToAbstractionId,
+			ToAbstractionId:   APP_NNAR + "[" + registerId + "]",
+			NnarWrite: &pb.NnarWrite{
+				Value: msg.GetAppWrite().GetValue(),
+			},
+		}
+		trigger(app.state, app.queue, &nnarWrite)
+
 	// When receiving an app_broadcast from the hub, start a beb broadcast.
 	case pb.Message_APP_BROADCAST:
 

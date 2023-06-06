@@ -1,3 +1,6 @@
+// create an abstraction when receiving a msg for consensus.
+// requeue event 
+
 syntax = "proto3";
 package hw.protobuf; // You can change the package name to anything you like
 option go_package = ".;protobuf"; // This is necessary only if you use Go

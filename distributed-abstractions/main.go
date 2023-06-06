@@ -57,7 +57,7 @@ func main() {
 	app := abstraction.NewApp(state, queue)
 	abstraction.RegisterAbstraction(abstractions, abs.APP, app)
 
-	appbeb := abstraction.NewAppBeb(state, queue)
+	appbeb := abstraction.NewAppBeb(state, queue, "app.beb")
 	abstraction.RegisterAbstraction(abstractions, abs.APP_BEB, appbeb)
 
 	qprocessor := qprocessor.NewQueueProcessor(abstractions)
