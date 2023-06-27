@@ -56,7 +56,7 @@ func main() {
 	app := abs.NewApp(state, queue, &abstractions)
 	abs.RegisterAbstraction(&abstractions, abs.APP, app)
 
-	appbeb := abs.NewAppBeb(state, queue, "app.beb")
+	appbeb := abs.NewBeb(state, queue, "app.beb")
 	abs.RegisterAbstraction(&abstractions, abs.APP_BEB, appbeb)
 
 	qprocessor := qprocessor.NewQueueProcessor(abstractions)
