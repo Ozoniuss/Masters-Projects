@@ -76,7 +76,9 @@ func (epfd *Epfd) Handle(msg *pb.Message) error {
 	switch msg.GetType() {
 
 	case pb.Message_EPFD_TIMEOUT:
-		if !intersect(epfd.alive, epfd.suspected) {
+		// If alive and suspected intersect, it means we need to increase
+		// timeout.
+		if intersect(epfd.alive, epfd.suspected) {
 			epfd.delay += epfd.delta
 		}
 		for _, proc := range epfd.state.Processes {
