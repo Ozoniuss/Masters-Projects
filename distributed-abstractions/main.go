@@ -5,7 +5,6 @@ import (
 	"hw/log"
 	"net"
 
-	"hw/abstraction"
 	abs "hw/abstraction"
 	"hw/qprocessor"
 	"hw/queue"
@@ -48,17 +47,17 @@ func main() {
 
 	abstractions := abs.InitAbstractions(state)
 
-	// Register perfect link, both as an app perfect link as well as a
-	// beb perfect link.
-	pl := abstraction.NewPl(state, queue)
-	abstraction.RegisterAbstraction(abstractions, abs.APP_PL, pl)
-	abstraction.RegisterAbstraction(abstractions, abs.APP_BEB_PL, pl)
+	pl := abs.NewPl(state, queue, &abstractions)
+	abs.RegisterAbstraction(&abstractions, abs.APP_PL, pl)
 
-	app := abstraction.NewApp(state, queue)
-	abstraction.RegisterAbstraction(abstractions, abs.APP, app)
+	bebpl := abs.NewPl(state, queue, &abstractions)
+	abs.RegisterAbstraction(&abstractions, abs.APP_BEB_PL, bebpl)
 
-	appbeb := abstraction.NewAppBeb(state, queue, "app.beb")
-	abstraction.RegisterAbstraction(abstractions, abs.APP_BEB, appbeb)
+	app := abs.NewApp(state, queue, &abstractions)
+	abs.RegisterAbstraction(&abstractions, abs.APP, app)
+
+	appbeb := abs.NewAppBeb(state, queue, "app.beb")
+	abs.RegisterAbstraction(&abstractions, abs.APP_BEB, appbeb)
 
 	qprocessor := qprocessor.NewQueueProcessor(abstractions)
 	qprocessor.Start(queue)

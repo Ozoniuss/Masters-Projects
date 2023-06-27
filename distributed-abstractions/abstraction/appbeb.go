@@ -35,8 +35,11 @@ func (appbeb *AppBeb) Handle(msg *pb.Message) error {
 	// When receiving beb broadcast, forward to the beb broadcast perfect link.
 	case pb.Message_BEB_BROADCAST:
 
-		// Trigger a perfect link send to all processes.
+		// Trigger a perfect link send to all processes except the hub.
 		for _, proc := range appbeb.state.Processes {
+			if proc.Owner == "hub" {
+				continue
+			}
 			plsend := pb.Message{
 				Type:              pb.Message_PL_SEND,
 				FromAbstractionId: msg.GetToAbstractionId(),

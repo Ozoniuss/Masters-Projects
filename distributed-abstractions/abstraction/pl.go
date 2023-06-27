@@ -1,12 +1,14 @@
 package abstraction
 
 import (
+	"encoding/binary"
 	"fmt"
 	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
 	"net"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -16,14 +18,16 @@ const MAX_MSG_SIZE = 256 * 256 * 256 * 256
 // Pl acts both as a perfect link for receiving messages from the hub, as well
 // as the other processes.
 type Pl struct {
-	state *procstate.ProcState
-	queue *queue.Queue
+	state        *procstate.ProcState
+	queue        *queue.Queue
+	abstractions *map[string]Abstraction
 }
 
-func NewPl(state *procstate.ProcState, queue *queue.Queue) *Pl {
+func NewPl(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction) *Pl {
 	return &Pl{
-		state: state,
-		queue: queue,
+		state:        state,
+		queue:        queue,
+		abstractions: abstractions,
 	}
 }
 
@@ -34,14 +38,13 @@ func (pl *Pl) Handle(msg *pb.Message) error {
 	// App.pl is what actually receives network messages.
 	case pb.Message_PL_SEND:
 
-		var PL string
-		if msg.ToAbstractionId == APP_BEB_PL {
-			PL = APP_BEB_PL
-		} else {
-			PL = APP_PL
-		}
-
+		abstractionId := msg.GetToAbstractionId()
 		destName := fmt.Sprintf("%s-%d", msg.GetPlSend().GetDestination().GetOwner(), msg.GetPlSend().GetDestination().GetIndex())
+
+		// Hack to send things to the hub.
+		if msg.GetPlSend().GetDestination().GetOwner() == "hub" {
+			destName = "hub"
+		}
 
 		// Do not use the custom dialer because the perfect link is already
 		// listening on its IP address. This means another IP address must
@@ -49,7 +52,7 @@ func (pl *Pl) Handle(msg *pb.Message) error {
 		// information is included in the network message anyway.
 		conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", msg.GetPlSend().GetDestination().GetHost(), msg.GetPlSend().GetDestination().GetPort()))
 		if err != nil {
-			return fmt.Errorf("%s could not connect to the hub: %w", PL, err)
+			return fmt.Errorf("%s could not connect to external process %s: %w", msg.GetPlSend().GetDestination(), abstractionId, err)
 		}
 		defer conn.Close()
 
@@ -57,8 +60,8 @@ func (pl *Pl) Handle(msg *pb.Message) error {
 		sendmsg := pb.Message{
 			Type:              pb.Message_NETWORK_MESSAGE,
 			MessageUuid:       uuid.NewString(),
-			FromAbstractionId: msg.ToAbstractionId,
-			ToAbstractionId:   APP_BEB_PL,
+			FromAbstractionId: abstractionId,
+			ToAbstractionId:   msg.GetToAbstractionId(), // each pl sends to its twin pl
 			SystemId:          pl.state.SystemId,
 			NetworkMessage: &pb.NetworkMessage{
 				// SenderHost:          pl.state.CurrentProcId.Host, (irrelevant)
@@ -72,12 +75,12 @@ func (pl *Pl) Handle(msg *pb.Message) error {
 		// Marshal the network message and send it to the other processes.
 		msgbyte, err := pb.MarshalMsg(&sendmsg)
 		if err != nil {
-			return fmt.Errorf("%s could not marshal message %+v: %w", PL, &sendmsg, err)
+			return fmt.Errorf("%s could not marshal message %+v: %w", abstractionId, &sendmsg, err)
 		}
 
 		_, err = conn.Write(msgbyte)
 		if err != nil {
-			return fmt.Errorf("%s could not send message %+v: %w", PL, &sendmsg, err)
+			return fmt.Errorf("%s could not send message %+v: %w", abstractionId, &sendmsg, err)
 		}
 
 		log.Printf("%s/%s -> %s : {%+v} \n\n", pl.state.SystemId, pl.state.Name(), destName, sendmsg.GetNetworkMessage().GetMessage())
@@ -119,8 +122,19 @@ func (pl *Pl) ReadSocket(lis net.Listener) error {
 		}
 
 		defer client.Close()
-		var received = make([]byte, MAX_MSG_SIZE)
-		mlen, err := client.Read(received)
+
+		var header = make([]byte, 4)
+		_, err = client.Read(header)
+		if err != nil {
+			panic("COULD NOT READ MESSAGE HEADER\n\n")
+		}
+
+		// We know this is going to be the size of the message.
+		mlen := binary.BigEndian.Uint32(header)
+
+		// Read that many bytes.
+		var received = make([]byte, mlen)
+		_, err = client.Read(received)
 
 		if err != nil {
 			return fmt.Errorf("could not read incoming message: %w", err)
@@ -129,7 +143,7 @@ func (pl *Pl) ReadSocket(lis net.Listener) error {
 		// log.Printf("%s-%d : received bytes %v\n", pl.state.CurrentProcId.Owner, pl.state.CurrentProcId.Index, received[:mlen])
 
 		var msg pb.Message
-		err = pb.UnmarshalMsg(received[:mlen], &msg)
+		err = pb.UnmarshalMsg(received, &msg)
 		if err != nil {
 			return fmt.Errorf("could not unmarshal incoming message: %w", err)
 		}
@@ -171,6 +185,18 @@ func (pl *Pl) ReadSocket(lis net.Listener) error {
 		// "toAbsractionId" inside the network message indicates the
 		// layer where the message was actually destined to go.
 
+		// Some abstractions have to be created, such as nnar.
+		to := msg.GetToAbstractionId()
+		parts := strings.Split(to, ".")
+		// In some cases a messages first gets to a nnar's perfect link.
+		if parts[0] == "app" && strings.Contains(parts[1], "nnar") {
+			registerId := parts[0] + "." + parts[1]
+			if _, ok := (*pl.abstractions)[registerId]; !ok {
+				nnar := NewNnar(pl.state, pl.queue, registerId)
+				RegisterNnar(pl.abstractions, registerId, nnar, pl.state, pl.queue)
+			}
+		}
+
 		deliver := pb.Message{
 			Type: pb.Message_PL_DELIVER,
 			// ToAbstractionId of the network message tells which pl gets the
@@ -180,6 +206,10 @@ func (pl *Pl) ReadSocket(lis net.Listener) error {
 			SystemId:          msg.GetSystemId(),
 			PlDeliver: &pb.PlDeliver{
 				Message: msg.GetNetworkMessage().GetMessage(),
+				Sender: &pb.ProcessId{
+					Host: msg.GetNetworkMessage().GetSenderHost(),
+					Port: msg.GetNetworkMessage().GetSenderListeningPort(),
+				},
 			},
 		}
 		trigger(pl.state, pl.queue, &deliver)

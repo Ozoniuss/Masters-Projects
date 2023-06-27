@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"hw/log"
 	pb "hw/protobuf"
@@ -73,9 +74,17 @@ func handshake(state *state.ProcState, host string, listeningPort, index int) er
 	}
 	defer client.Close()
 
+	var header = make([]byte, 4)
+	_, err = client.Read(header)
+	if err != nil {
+		panic("COULD NOT READ HANDSHAKE HEADER")
+	}
+
+	mlen := binary.BigEndian.Uint32(header)
+
 	// Read the incoming message.
-	var received = make([]byte, MAX_MSG_SIZE)
-	mlen, err := client.Read(received)
+	var received = make([]byte, mlen)
+	_, err = client.Read(received)
 
 	if err != nil {
 		return fmt.Errorf("could not read initialization message from hub: %w", err)
@@ -101,6 +110,10 @@ func handshake(state *state.ProcState, host string, listeningPort, index int) er
 	state.Processes = make([]*pb.ProcessId, 0, len(msg.GetProcInitializeSystem().GetProcesses()))
 
 	for _, pid := range msg.GetProcInitializeSystem().GetProcesses() {
+		// Do not register the hub to the process list.
+		if pid.Owner == "hub" {
+			continue
+		}
 		state.Processes = append(state.Processes, pid)
 		if pid.Host == host && pid.Port == int32(listeningPort) {
 			if state.CurrentProcId != nil {

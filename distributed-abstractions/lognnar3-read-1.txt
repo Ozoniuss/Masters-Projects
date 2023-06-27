@@ -1,0 +1,12 @@
+11:19:12.781 DBG                                         sys-1/ref-3 triggers : {PL_SEND from app to app.pl} containing {APP_READ_RETURN(x=89) from app to hub}
+11:19:12.781 TRC                                         sys-1/ref-3 triggers : {"type":91,"FromAbstractionId":"app","ToAbstractionId":"app.pl","plSend":{"destination":{"host":"127.0.0.1","port":5000,"owner":"hub"},"message":{"type":10,"FromAbstractionId":"app","ToAbstractionId":"hub","appReadReturn":{"register":"x","value":{"defined":true,"v":89}}}}}
+11:19:12.781 DBG                                         sys-1/ref-3 -> hub : {APP_READ_RETURN(x=89) from app to hub}
+11:19:12.781 TRC Received message data length 103
+11:19:12.781 TRC                                         sys-1/ref-3 -> : {"type":10,"FromAbstractionId":"app","ToAbstractionId":"hub","appReadReturn":{"register":"x","value":{"defined":true,"v":89}}}
+11:19:12.781 TRC hub : received bytes 122430353435643037632d376533612d346334612d623963392d3639343161393839316433651a066170702e706c22066170702e706c2a057379732d3132280a093132372e302e302e311089271a18080a1a0361707022036875628201090a0178120408011059
+11:19:12.781 TRC                                         sys-1/ref-3 -> hub : {NETWORK_MESSAGE from app.pl to app.pl} containing {APP_READ_RETURN(x=89) from app to hub}
+11:19:12.782 INF hub: sys-1/ref-1 read x=89
+11:19:12.782 TRC                                         sys-1/ref-3 -> : {"messageUuid":"97afac82-3173-423e-a845-2ecdda4be374","FromAbstractionId":"app.pl","ToAbstractionId":"app.pl","systemId":"sys-1","networkMessage":{"senderHost":"127.0.0.1","senderListeningPort":5003,"message":{"type":10,"FromAbstractionId":"app","ToAbstractionId":"hub","appReadReturn":{"register":"x","value":{"defined":true,"v":89}}}}}
+11:19:12.782 TRC Received message data length 103
+11:19:12.782 TRC hub : received bytes 122435626661626538622d343530302d346563322d623430632d3830383233363630306533661a066170702e706c22066170702e706c2a057379732d3132280a093132372e302e302e31108b271a18080a1a0361707022036875628201090a0178120408011059
+11:19:12.782 INF hub: sys-1/ref-3 read x=89

@@ -16,10 +16,13 @@ func MarshalMsg(m protoreflect.ProtoMessage) ([]byte, error) {
 		return nil, err
 	}
 
-	ret := make([]byte, len(msg)+4)
+	// ret := make([]byte, len(msg)+4)
 
+	// binary.BigEndian.PutUint32(ret, uint32(len(msg)))
+	// copy(ret[4:], msg)
+	ret := make([]byte, 4)
 	binary.BigEndian.PutUint32(ret, uint32(len(msg)))
-	copy(ret[4:], msg)
+	ret = append(ret, msg...)
 	return ret, nil
 }
 
@@ -31,7 +34,8 @@ func UnmarshalMsg(b []byte, m protoreflect.ProtoMessage) error {
 	//mlen := binary.BigEndian.Uint32(b[:4])
 
 	// Remove length header.
-	err := proto.Unmarshal(b[4:], m)
+	// err := proto.Unmarshal(b[4:], m)
+	err := proto.Unmarshal(b, m)
 	if err != nil {
 		return err
 	}
