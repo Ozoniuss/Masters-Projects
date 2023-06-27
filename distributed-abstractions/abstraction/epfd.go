@@ -38,6 +38,7 @@ func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId strin
 		queue:         queue,
 		abstractionId: abstractionId,
 		alive:         state.GetProcessesAsMap(),
+		suspected:     make(map[*pb.ProcessId]struct{}, len(state.Processes)),
 		delta:         1 * time.Second,
 		delay:         1 * time.Second,
 
