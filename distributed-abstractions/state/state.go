@@ -24,3 +24,11 @@ func NewProcState() *ProcState {
 func (p *ProcState) Name() string {
 	return fmt.Sprintf("%s-%d", p.CurrentProcId.Owner, p.CurrentProcId.Index)
 }
+
+func (p *ProcState) GetProcessesAsMap() map[*pb.ProcessId]struct{} {
+	all := make(map[*pb.ProcessId]struct{}, len(p.Processes))
+	for _, p := range p.Processes {
+		all[p] = struct{}{}
+	}
+	return all
+}
