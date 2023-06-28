@@ -32,3 +32,16 @@ func (p *ProcState) GetProcessesAsMap() map[*pb.ProcessId]struct{} {
 	}
 	return all
 }
+
+func (p *ProcState) GetHighestRankingProcess() *pb.ProcessId {
+	var ret *pb.ProcessId
+	var maxRank = -1
+
+	for _, p := range p.Processes {
+		if p.Rank > int32(maxRank) {
+			ret = p
+			maxRank = int(p.Rank)
+		}
+	}
+	return ret
+}
