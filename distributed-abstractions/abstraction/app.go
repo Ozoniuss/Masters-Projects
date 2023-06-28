@@ -9,17 +9,32 @@ import (
 )
 
 type App struct {
-	abstractions *map[string]Abstraction
-	state        *procstate.ProcState
-	queue        *queue.Queue
+	abstractions  *map[string]Abstraction
+	state         *procstate.ProcState
+	queue         *queue.Queue
+	abstractionId string
+	stopq         chan struct{}
 }
 
-func NewApp(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction) *App {
-	return &App{
-		state:        state,
-		queue:        queue,
-		abstractions: abstractions,
+func NewApp(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, stopq chan struct{}) *App {
+	app := &App{
+		state:         state,
+		queue:         queue,
+		abstractions:  abstractions,
+		abstractionId: "app",
+		stopq:         stopq,
 	}
+
+	beb := NewBeb(app.state, app.queue, app.abstractionId+".beb")
+	pl := NewPl(app.state, app.queue, app.abstractionId+".pl", abstractions)
+	bebpl := NewPl(app.state, app.queue, app.abstractionId+".beb.pl", abstractions)
+
+	// Register all abstractions that are related to the app.
+	RegisterAbstraction(app.abstractions, beb.abstractionId, beb)
+	RegisterAbstraction(app.abstractions, pl.abstractionId, pl)
+	RegisterAbstraction(app.abstractions, bebpl.abstractionId, bebpl)
+
+	return app
 }
 
 func (app *App) Handle(msg *pb.Message) error {
@@ -28,6 +43,49 @@ func (app *App) Handle(msg *pb.Message) error {
 	}
 	log.Printf("[%s got message]: {%+v}\n\n", APP, msg)
 	switch msg.GetType() {
+
+	case pb.Message_PROC_INITIALIZE_SYSTEM:
+		app.state.SystemId = msg.SystemId
+		app.state.Processes = make([]*pb.ProcessId, 0, len(msg.GetProcInitializeSystem().GetProcesses()))
+
+		for _, pid := range msg.GetProcInitializeSystem().GetProcesses() {
+			// Do not register the hub to the process list.
+			if pid.Owner == "hub" {
+				continue
+			}
+			app.state.Processes = append(app.state.Processes, pid)
+			if pid.Host == app.state.Host && pid.Port == int32(app.state.Port) {
+				if app.state.CurrentProcId != nil {
+					panic("current process already identified")
+				}
+				app.state.CurrentProcId = pid
+			}
+		}
+
+		log.Printf("[%s] system id: %s\n", APP, app.state.SystemId)
+		log.Printf("[%s] current process: {%+v}\n", APP, app.state.CurrentProcId)
+
+		for _, p := range app.state.Processes {
+			log.Printf("[%s] process %s-%d: {%+v}\n", APP, p.Owner, p.Index, p)
+		}
+		fmt.Println()
+
+		fmt.Printf("[%s] Initialization Complete.\n\n", APP)
+
+	case pb.Message_PROC_DESTROY_SYSTEM:
+		// Stop the queue from processing.
+		app.stopq <- struct{}{}
+
+		// Clear all abstractions and the queue.
+		newAbstractions := make(map[string]Abstraction)
+
+		// Initialize new abstractions. No need for hthe handshake now.
+		app.abstractions = &newAbstractions
+		app.state.CurrentProcId = nil
+		app.state.Processes = nil
+
+		// Register the app abstraction.
+		RegisterAbstraction(app.abstractions, "app", app)
 
 	// Hub sends an APP_WRITE when attempting to write to the register.
 	case pb.Message_APP_WRITE:

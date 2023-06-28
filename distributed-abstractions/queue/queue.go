@@ -50,3 +50,10 @@ func (q *Queue) Len() int {
 	defer q.mtx.RUnlock()
 	return len(q.messages)
 }
+
+// Clear empties the queue.
+func (q *Queue) Clear() {
+	q.mtx.RLock()
+	defer q.mtx.RUnlock()
+	q.messages = make([]*pb.Message, 0, 1000)
+}

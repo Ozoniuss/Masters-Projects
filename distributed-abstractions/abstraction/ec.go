@@ -29,10 +29,10 @@ func NewEc(state *procstate.ProcState, queue *queue.Queue, abstractionId string,
 		ts:            int(state.CurrentProcId.Rank),
 	}
 
-	pl := NewPl(ec.state, ec.queue, ec.abstractions)
+	pl := NewPl(ec.state, ec.queue, ec.abstractionId+".pl", ec.abstractions)
 	beb := NewBeb(ec.state, ec.queue, ec.abstractionId+".beb")
 	eld := NewEld(ec.state, ec.queue, ec.abstractionId+".eld", ec.abstractions)
-	RegisterAbstraction(ec.abstractions, ec.abstractionId+".pl", pl)
+	RegisterAbstraction(ec.abstractions, pl.abstractionId, pl)
 	RegisterAbstraction(ec.abstractions, beb.abstractionId, beb)
 	RegisterAbstraction(ec.abstractions, eld.abstractionId, eld)
 

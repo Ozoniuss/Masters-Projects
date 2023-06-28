@@ -55,9 +55,9 @@ func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string,
 		leader:        leader,
 	}
 
-	pl := NewPl(ep.state, ep.queue, ep.abstractions)
+	pl := NewPl(ep.state, ep.queue, ep.abstractionId+".pl", ep.abstractions)
 	beb := NewBeb(ep.state, ep.queue, ep.abstractionId+".beb")
-	RegisterAbstraction(ep.abstractions, ep.abstractionId+".pl", pl)
+	RegisterAbstraction(ep.abstractions, pl.abstractionId, pl)
 	RegisterAbstraction(ep.abstractions, beb.abstractionId, beb)
 
 	return ep

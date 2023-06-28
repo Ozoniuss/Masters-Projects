@@ -28,38 +28,26 @@ func main() {
 
 	var host = HOST
 
-	state := state.NewProcState()
-
-	// Deal with handshake separately because it's easier.
-	err := handshake(state, host, port, index)
-	if err != nil {
-		log.Printf("error during handshake: %s\n\n", err.Error())
-		return
-	}
-
-	log.Printf("System initialized. Process internal state: %+v\n\n", state)
-
-	/*
-		These only occur once the handshake is complete.
-	*/
-
+	state := state.NewProcState(host, int32(port))
 	queue := queue.NewQueue(1000)
-
 	abstractions := abs.InitAbstractions(state)
 
-	pl := abs.NewPl(state, queue, &abstractions)
-	abs.RegisterAbstraction(&abstractions, abs.APP_PL, pl)
+	// Can be used to stop the message
+	stopq := make(chan struct{}, 1)
 
-	bebpl := abs.NewPl(state, queue, &abstractions)
-	abs.RegisterAbstraction(&abstractions, abs.APP_BEB_PL, bebpl)
+	// Do an initial handshake before reading socker.
+	err := handshake(state, host, port, index)
+	if err != nil {
+		log.Printf("error during handshake: %s", err.Error())
+	}
 
-	app := abs.NewApp(state, queue, &abstractions)
+	app := abs.NewApp(state, queue, &abstractions, stopq)
 	abs.RegisterAbstraction(&abstractions, abs.APP, app)
 
-	appbeb := abs.NewBeb(state, queue, "app.beb")
-	abs.RegisterAbstraction(&abstractions, abs.APP_BEB, appbeb)
+	// Get the perfect link.
+	pl := abstractions["app.pl"].(*abs.Pl)
 
-	qprocessor := qprocessor.NewQueueProcessor(abstractions)
+	qprocessor := qprocessor.NewQueueProcessor(abstractions, stopq)
 	qprocessor.Start(queue)
 
 	lis, err := net.Listen(TCP, fmt.Sprintf("127.0.0.1:%d", port))

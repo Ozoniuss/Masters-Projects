@@ -20,6 +20,6 @@ func RegisterNnar(abstractions *map[string]Abstraction, key string, abs Abstract
 
 	// For this nnar, register beb and pl.
 	RegisterAbstraction(abstractions, key+".beb", NewBeb(state, queue, key+".beb"))
-	RegisterAbstraction(abstractions, key+".beb.pl", NewPl(state, queue, abstractions))
-	RegisterAbstraction(abstractions, key+".pl", NewPl(state, queue, abstractions))
+	RegisterAbstraction(abstractions, key+".beb.pl", NewPl(state, queue, key+".beb.pl", abstractions))
+	RegisterAbstraction(abstractions, key+".pl", NewPl(state, queue, key+".pl", abstractions))
 }

@@ -13,17 +13,21 @@ type QueueProcessor struct {
 	stopc        chan struct{}
 }
 
-func NewQueueProcessor(abstractions map[string]abstraction.Abstraction) *QueueProcessor {
+func NewQueueProcessor(abstractions map[string]abstraction.Abstraction, stopc chan struct{}) *QueueProcessor {
+	if stopc == nil {
+		stopc = make(chan struct{}, 1)
+	}
 	return &QueueProcessor{
 		abstractions: abstractions,
-		stopc:        make(chan struct{}, 1),
+
+		stopc: stopc,
 	}
 }
 
 func (p *QueueProcessor) processMessage(msg *pb.Message) {
 
 	if msg == nil {
-		log.Printf("received nil message while processing\n\n")
+		log.Printf("[qprocessor] received nil message while processing\n\n")
 		p.Stop()
 	}
 
@@ -33,19 +37,19 @@ func (p *QueueProcessor) processMessage(msg *pb.Message) {
 	aid := msg.GetToAbstractionId()
 
 	if aid == "" {
-		log.Printf("message has no destination abstraction id\n\n")
+		log.Printf("[qprocessor] message has no destination abstraction id\n\n")
 		return
 	}
 
 	abs, ok := p.abstractions[aid]
 	if !ok {
-		log.Printf("no handler registered for abstraction id: %s\n\n", aid)
+		log.Printf("[qprocessor] no handler registered for abstraction id: %s\n\n", aid)
 		return
 	}
 
 	err := abs.Handle(msg)
 	if err != nil {
-		log.Printf("received error while handling message: %s\n\n", err.Error())
+		log.Printf("[qprocessor] received error while handling message: %s\n\n", err.Error())
 		p.Stop()
 	}
 }
@@ -57,8 +61,8 @@ func (p *QueueProcessor) Start(queue *queue.Queue) {
 		for {
 			select {
 			case <-p.stopc:
-				log.Printf("queue stopped\n\n")
-				return
+				log.Printf("queue cleared\n\n")
+				queue.Clear()
 			default:
 				if queue.Len() == 0 {
 					// fmt.Println("reading")

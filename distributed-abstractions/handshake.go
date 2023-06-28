@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"hw/log"
 	pb "hw/protobuf"
 	"hw/state"
 	"net"
-	"net/netip"
 
 	"github.com/google/uuid"
 )
@@ -16,13 +14,7 @@ import (
 
 func handshake(state *state.ProcState, host string, listeningPort, index int) error {
 
-	d := net.Dialer{
-		LocalAddr: net.TCPAddrFromAddrPort(
-			netip.AddrPortFrom(netip.AddrFrom4([4]byte{127, 0, 0, 1}), uint16(listeningPort))),
-	}
-
-	// Connect to the fucking hub.
-	conn, err := d.Dial(TCP, HUB_ADDRESS)
+	conn, err := net.Dial(TCP, HUB_ADDRESS)
 	if err != nil {
 		return fmt.Errorf("could not connect to the hub: %w", err)
 	}
@@ -49,81 +41,75 @@ func handshake(state *state.ProcState, host string, listeningPort, index int) er
 	{
 		msg, err := pb.MarshalMsg(&hello)
 		if err != nil {
-			return fmt.Errorf("could not marshal initialization message: %w", err)
+			return fmt.Errorf("sending initialization message: %s", err.Error())
 		}
 
 		n, err := conn.Write(msg)
 		if err != nil {
-			return fmt.Errorf("could not send initialization message: %w", err)
+			return fmt.Errorf("sending initialization message: %s", err.Error())
 		}
-		log.Printf("sent process registration: %d bytes\n", n)
+		log.Printf("[handshake] sent process registration: %d bytes\n\n", n)
 	}
 
 	conn.Close()
 
-	// Wait for confirmation message.
-	lis, err := net.Listen(TCP, fmt.Sprintf("127.0.0.1:%d", listeningPort))
-	if err != nil {
-		return fmt.Errorf("listening failed on the local network: %w", err)
-	}
-	defer lis.Close()
+	// // Wait for confirmation message.
+	// lis, err := net.Listen(TCP, fmt.Sprintf("127.0.0.1:%d", listeningPort))
+	// if err != nil {
+	// 	return fmt.Errorf("listening during handshake: %s", err.Error())
+	// }
+	// defer lis.Close()
 
-	client, err := lis.Accept()
-	if err != nil {
-		return fmt.Errorf("could not accept connection: %w", err)
-	}
-	defer client.Close()
+	// client, err := lis.Accept()
+	// if err != nil {
+	// 	return fmt.Errorf("accepting connections during handshake: %s", err.Error())
+	// }
+	// defer client.Close()
 
-	var header = make([]byte, 4)
-	_, err = client.Read(header)
-	if err != nil {
-		panic("COULD NOT READ HANDSHAKE HEADER")
-	}
+	// // Read message header
+	// var header = make([]byte, 4)
+	// _, err = client.Read(header)
+	// if err != nil {
+	// 	return fmt.Errorf("reading header during handshake: %s", err.Error())
+	// }
+	// mlen := binary.BigEndian.Uint32(header)
 
-	mlen := binary.BigEndian.Uint32(header)
+	// // Read the incoming message.
+	// var received = make([]byte, mlen)
+	// _, err = client.Read(received)
+	// if err != nil {
+	// 	return fmt.Errorf("reading system init during handshake: %s", err.Error())
+	// }
 
-	// Read the incoming message.
-	var received = make([]byte, mlen)
-	_, err = client.Read(received)
+	// var m pb.Message
+	// err = pb.UnmarshalMsg(received[:mlen], &m)
+	// if err != nil {
+	// 	return fmt.Errorf("unmarshaling system init during handshake: %s", err.Error())
+	// }
 
-	if err != nil {
-		return fmt.Errorf("could not read initialization message from hub: %w", err)
-	}
+	// log.Printf("[handshake] got {%+v}\n\n", &m)
 
-	var m pb.Message
-	err = pb.UnmarshalMsg(received[:mlen], &m)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal initialization message from hub: %s", err)
-	}
+	// msg := m.GetNetworkMessage().GetMessage()
+	// if msg.GetType() != pb.Message_PROC_INITIALIZE_SYSTEM {
+	// 	return fmt.Errorf("received invalid message type during initialization: %s", m.GetType())
+	// }
 
-	if m.GetType() != pb.Message_NETWORK_MESSAGE {
-		return fmt.Errorf("did not receive network message during initialization, got %v", m.GetType())
-	}
-	log.Printf("got ProcInitializeSystem message: %+v\n", &m)
+	// state.SystemId = msg.SystemId
+	// state.Processes = make([]*pb.ProcessId, 0, len(msg.GetProcInitializeSystem().GetProcesses()))
 
-	msg := m.GetNetworkMessage().GetMessage()
-	if msg.GetType() != pb.Message_PROC_DESTROY_SYSTEM && msg.GetType() != pb.Message_PROC_INITIALIZE_SYSTEM {
-		return fmt.Errorf("received invalid message type during initialization: %v", m.GetType())
-	}
-
-	state.SystemId = msg.SystemId
-	state.Processes = make([]*pb.ProcessId, 0, len(msg.GetProcInitializeSystem().GetProcesses()))
-
-	for _, pid := range msg.GetProcInitializeSystem().GetProcesses() {
-		// Do not register the hub to the process list.
-		if pid.Owner == "hub" {
-			continue
-		}
-		state.Processes = append(state.Processes, pid)
-		if pid.Host == host && pid.Port == int32(listeningPort) {
-			if state.CurrentProcId != nil {
-				panic("current process already identified")
-			}
-			state.CurrentProcId = pid
-		}
-	}
-
-	log.Println("handshake complete")
-
+	// for _, pid := range msg.GetProcInitializeSystem().GetProcesses() {
+	// 	// Do not register the hub to the process list.
+	// 	if pid.Owner == "hub" {
+	// 		continue
+	// 	}
+	// 	state.Processes = append(state.Processes, pid)
+	// 	if pid.Host == host && pid.Port == int32(listeningPort) {
+	// 		if state.CurrentProcId != nil {
+	// 			panic("current process already identified")
+	// 		}
+	// 		state.CurrentProcId = pid
+	// 	}
+	// }
+	// log.Printf("[handshake] Completed. \n\n")
 	return nil
 }

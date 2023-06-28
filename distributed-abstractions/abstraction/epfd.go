@@ -65,8 +65,8 @@ func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId strin
 		}
 	}()
 
-	pl := NewPl(epfd.state, epfd.queue, epfd.abstractions)
-	RegisterAbstraction(epfd.abstractions, epfd.abstractionId+".pl", pl)
+	pl := NewPl(epfd.state, epfd.queue, epfd.abstractionId+".pl", epfd.abstractions)
+	RegisterAbstraction(epfd.abstractions, pl.abstractionId, pl)
 
 	return epfd
 }

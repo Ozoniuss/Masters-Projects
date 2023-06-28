@@ -13,15 +13,23 @@ type ProcState struct {
 	Quit          chan struct{}
 	// The id of the system, as sent by the hub.
 	SystemId string
+
+	Host string
+	Port int32
 }
 
-func NewProcState() *ProcState {
+func NewProcState(host string, port int32) *ProcState {
 	return &ProcState{
 		Quit: make(chan struct{}, 1),
+		Host: host,
+		Port: port,
 	}
 }
 
 func (p *ProcState) Name() string {
+	if p.CurrentProcId == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s-%d", p.CurrentProcId.Owner, p.CurrentProcId.Index)
 }
 
