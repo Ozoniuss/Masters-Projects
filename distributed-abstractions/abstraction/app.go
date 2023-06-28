@@ -166,6 +166,44 @@ func (app *App) Handle(msg *pb.Message) error {
 		}
 		trigger(app.state, app.queue, &plsend)
 
+	case pb.Message_UC_DECIDE:
+		plSend := pb.Message{
+			Type:              pb.Message_PL_SEND,
+			FromAbstractionId: msg.GetToAbstractionId(),
+			ToAbstractionId:   Next(msg.GetToAbstractionId(), "pl"),
+			PlSend: &pb.PlSend{
+				Destination: &pb.ProcessId{
+					Host:  "127.0.0.1",
+					Port:  5000,
+					Owner: "hub",
+				},
+				Message: &pb.Message{
+					Type:              pb.Message_APP_DECIDE,
+					FromAbstractionId: msg.GetToAbstractionId(),
+					ToAbstractionId:   msg.GetToAbstractionId(),
+					AppDecide: &pb.AppDecide{
+						Value: msg.GetUcDecide().GetValue(),
+					},
+				},
+			},
+		}
+		trigger(app.state, app.queue, &plSend)
+
+	case pb.Message_APP_PROPOSE:
+		ucid := fmt.Sprintf("app.uc[%s]", msg.GetAppPropose().GetTopic())
+		uc := NewUc(app.state, app.queue, app.abstractions, ucid)
+		RegisterAbstraction(app.abstractions, ucid, uc)
+
+		ucPropose := pb.Message{
+			Type:              pb.Message_UC_PROPOSE,
+			FromAbstractionId: msg.GetToAbstractionId(),
+			ToAbstractionId:   ucid,
+			UcPropose: &pb.UcPropose{
+				Value: msg.GetAppPropose().GetValue(),
+			},
+		}
+		trigger(app.state, app.queue, &ucPropose)
+
 	case pb.Message_PL_DELIVER:
 		return app.Handle(msg.GetPlDeliver().GetMessage())
 	}

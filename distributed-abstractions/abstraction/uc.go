@@ -24,7 +24,7 @@ type Uc struct {
 	decided       bool
 }
 
-func NewUc(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, abstractionId string, epState EpState) *Uc {
+func NewUc(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, abstractionId string) *Uc {
 
 	l := state.GetHighestRankingProcess()
 	uc := &Uc{
