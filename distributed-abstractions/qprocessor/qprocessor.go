@@ -47,6 +47,8 @@ func (p *QueueProcessor) processMessage(msg *pb.Message) {
 		return
 	}
 
+	log.Printf("[to %s] {%+v}\n\n", msg.ToAbstractionId, msg)
+
 	err := abs.Handle(msg)
 	if err != nil {
 		log.Printf("[qprocessor] received error while handling message: %s\n\n", err.Error())

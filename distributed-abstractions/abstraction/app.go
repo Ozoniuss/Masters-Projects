@@ -38,10 +38,7 @@ func NewApp(state *procstate.ProcState, queue *queue.Queue, abstractions *map[st
 }
 
 func (app *App) Handle(msg *pb.Message) error {
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", APP)
-	}
-	log.Printf("[%s got message]: {%+v}\n\n", APP, msg)
+
 	switch msg.GetType() {
 
 	case pb.Message_PROC_INITIALIZE_SYSTEM:

@@ -1,8 +1,6 @@
 package abstraction
 
 import (
-	"fmt"
-	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
@@ -72,12 +70,6 @@ func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId strin
 }
 
 func (epfd *Epfd) Handle(msg *pb.Message) error {
-
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", epfd.abstractionId)
-	}
-
-	log.Printf("[%s got message]: {%+v}\n\n", epfd.abstractionId, msg)
 
 	switch msg.GetType() {
 

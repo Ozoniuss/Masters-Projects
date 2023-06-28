@@ -1,8 +1,6 @@
 package abstraction
 
 import (
-	"fmt"
-	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
@@ -40,12 +38,6 @@ func NewNnar(state *procstate.ProcState, queue *queue.Queue, registerId string) 
 }
 
 func (nnar *Nnar) Handle(msg *pb.Message) error {
-
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", APP_NNAR)
-	}
-
-	log.Printf("[%s got message]: {%+v}\n\n", APP_NNAR, msg)
 
 	switch msg.GetType() {
 

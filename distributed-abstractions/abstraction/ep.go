@@ -1,7 +1,6 @@
 package abstraction
 
 import (
-	"fmt"
 	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
@@ -64,12 +63,6 @@ func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string,
 }
 
 func (ep *Ep) Handle(msg *pb.Message) error {
-
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", ep.abstractionId)
-	}
-
-	log.Printf("[%s got message]: {%+v}\n\n", ep.abstractionId, msg)
 
 	if ep.halt {
 		log.Printf("%s halting...\n\n", ep.abstractionId)

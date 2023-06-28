@@ -1,8 +1,6 @@
 package abstraction
 
 import (
-	"fmt"
-	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
@@ -61,12 +59,6 @@ func (eld *Eld) check() {
 }
 
 func (eld *Eld) Handle(msg *pb.Message) error {
-
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", eld.abstractionId)
-	}
-
-	log.Printf("[%s got message]: {%+v}\n\n", eld.abstractionId, msg)
 
 	// Only need to perform the check of one of those two change.
 	switch msg.GetType() {

@@ -1,8 +1,6 @@
 package abstraction
 
 import (
-	"fmt"
-	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
@@ -23,12 +21,6 @@ func NewBeb(state *procstate.ProcState, queue *queue.Queue, abstractionId string
 }
 
 func (appbeb *Beb) Handle(msg *pb.Message) error {
-
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", appbeb.abstractionId)
-	}
-
-	log.Printf("[%s got message]: {%+v}\n\n", appbeb.abstractionId, msg)
 
 	switch msg.GetType() {
 
