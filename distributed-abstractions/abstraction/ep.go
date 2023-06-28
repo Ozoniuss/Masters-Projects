@@ -38,7 +38,7 @@ type Ep struct {
 	halt          bool
 }
 
-func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string, epState EpState) *Ep {
+func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string, epState EpState, leader *pb.ProcessId, ts int) *Ep {
 
 	return &Ep{
 		state:         state,
@@ -47,8 +47,10 @@ func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string,
 		epState:       epState,
 		accepted:      0,
 		epStates:      make(map[*pb.ProcessId]EpState),
-		tmpval:        &pb.Value{},
+		tmpval:        &pb.Value{Defined: false},
 		halt:          false,
+		ets:           ts,
+		leader:        leader,
 	}
 }
 
@@ -179,6 +181,8 @@ func (ep *Ep) Handle(msg *pb.Message) error {
 				val:   msg.GetPlDeliver().GetMessage().GetEpInternalState().GetValue(),
 			}
 			if len(ep.epStates) > len(ep.state.Processes)/2 {
+
+				// Is ts a typo?
 				highestState := highest(ep.epStates)
 				// TODO: maybe check againts null?
 				if highestState.val.GetDefined() {
