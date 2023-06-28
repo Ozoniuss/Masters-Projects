@@ -12,20 +12,31 @@ type Ec struct {
 	state         *procstate.ProcState
 	queue         *queue.Queue
 	abstractionId string
+	abstractions  *map[string]Abstraction
 	trusted       *pb.ProcessId
 	lastts        int
 	ts            int
 }
 
-func NewEc(state *procstate.ProcState, queue *queue.Queue, abstractionId string) *Ec {
+func NewEc(state *procstate.ProcState, queue *queue.Queue, abstractionId string, abstractions *map[string]Abstraction) *Ec {
 
-	return &Ec{
+	ec := &Ec{
 		state:         state,
 		queue:         queue,
 		abstractionId: abstractionId,
+		abstractions:  abstractions,
 		trusted:       state.GetHighestRankingProcess(),
 		ts:            int(state.CurrentProcId.Rank),
 	}
+
+	pl := NewPl(ec.state, ec.queue, ec.abstractions)
+	beb := NewBeb(ec.state, ec.queue, ec.abstractionId+".beb")
+	eld := NewEld(ec.state, ec.queue, ec.abstractionId+".eld", ec.abstractions)
+	RegisterAbstraction(ec.abstractions, ec.abstractionId+".pl", pl)
+	RegisterAbstraction(ec.abstractions, beb.abstractionId, beb)
+	RegisterAbstraction(ec.abstractions, eld.abstractionId, eld)
+
+	return ec
 }
 
 func (ec *Ec) Handle(msg *pb.Message) error {
@@ -34,7 +45,7 @@ func (ec *Ec) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", ec.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", ec.abstractionId, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", ec.abstractionId, msg)
 
 	// Only need to perform the check of one of those two change.
 	switch msg.GetType() {

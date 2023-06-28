@@ -26,7 +26,7 @@ func (app *App) Handle(msg *pb.Message) error {
 	if msg == nil {
 		return fmt.Errorf("%s handler received nil message", APP)
 	}
-	log.Printf("[%s got message]: %+v\n\n", APP, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", APP, msg)
 	switch msg.GetType() {
 
 	// Hub sends an APP_WRITE when attempting to write to the register.

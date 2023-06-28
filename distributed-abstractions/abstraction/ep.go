@@ -29,6 +29,7 @@ type Ep struct {
 	state         *procstate.ProcState
 	queue         *queue.Queue
 	abstractionId string
+	abstractions  *map[string]Abstraction
 	epStates      map[*pb.ProcessId]EpState
 	tmpval        *pb.Value
 	epState       EpState
@@ -38,12 +39,13 @@ type Ep struct {
 	halt          bool
 }
 
-func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string, epState EpState, leader *pb.ProcessId, ts int) *Ep {
+func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string, abstractions *map[string]Abstraction, epState EpState, leader *pb.ProcessId, ts int) *Ep {
 
-	return &Ep{
+	ep := &Ep{
 		state:         state,
 		queue:         queue,
 		abstractionId: abstractionId,
+		abstractions:  abstractions,
 		epState:       epState,
 		accepted:      0,
 		epStates:      make(map[*pb.ProcessId]EpState),
@@ -52,6 +54,13 @@ func NewEp(state *procstate.ProcState, queue *queue.Queue, abstractionId string,
 		ets:           ts,
 		leader:        leader,
 	}
+
+	pl := NewPl(ep.state, ep.queue, ep.abstractions)
+	beb := NewBeb(ep.state, ep.queue, ep.abstractionId+".beb")
+	RegisterAbstraction(ep.abstractions, ep.abstractionId+".pl", pl)
+	RegisterAbstraction(ep.abstractions, beb.abstractionId, beb)
+
+	return ep
 }
 
 func (ep *Ep) Handle(msg *pb.Message) error {
@@ -60,7 +69,7 @@ func (ep *Ep) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", ep.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", ep.abstractionId, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", ep.abstractionId, msg)
 
 	if ep.halt {
 		log.Printf("%s halting...\n\n", ep.abstractionId)

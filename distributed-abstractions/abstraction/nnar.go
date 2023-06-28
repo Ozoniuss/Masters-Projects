@@ -45,7 +45,7 @@ func (nnar *Nnar) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", APP_NNAR)
 	}
 
-	log.Printf("%s got message: %+v\n\n", APP_NNAR, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", APP_NNAR, msg)
 
 	switch msg.GetType() {
 

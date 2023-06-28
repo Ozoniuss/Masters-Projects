@@ -12,19 +12,25 @@ type Eld struct {
 	state         *procstate.ProcState
 	queue         *queue.Queue
 	abstractionId string
+	abstractions  *map[string]Abstraction
 	suspected     map[*pb.ProcessId]struct{}
 	leader        *pb.ProcessId
 }
 
-func NewEld(state *procstate.ProcState, queue *queue.Queue, abstractionId string) *Eld {
+func NewEld(state *procstate.ProcState, queue *queue.Queue, abstractionId string, abstractions *map[string]Abstraction) *Eld {
 
-	return &Eld{
+	eld := &Eld{
 		state:         state,
 		queue:         queue,
 		abstractionId: abstractionId,
+		abstractions:  abstractions,
 		suspected:     make(map[*pb.ProcessId]struct{}, len(state.Processes)),
 		leader:        nil,
 	}
+
+	epfd := NewEpfd(eld.state, eld.queue, eld.abstractionId+".epfd", eld.abstractions)
+	RegisterAbstraction(eld.abstractions, epfd.abstractionId, epfd)
+	return eld
 }
 
 func (eld *Eld) check() {
@@ -60,7 +66,7 @@ func (eld *Eld) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", eld.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", eld.abstractionId, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", eld.abstractionId, msg)
 
 	// Only need to perform the check of one of those two change.
 	switch msg.GetType() {

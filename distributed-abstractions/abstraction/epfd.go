@@ -23,6 +23,7 @@ type Epfd struct {
 	state         *procstate.ProcState
 	queue         *queue.Queue
 	abstractionId string
+	abstractions  *map[string]Abstraction
 	alive         map[*pb.ProcessId]struct{}
 	suspected     map[*pb.ProcessId]struct{}
 	delay         time.Duration
@@ -31,16 +32,17 @@ type Epfd struct {
 	timeoutDone chan struct{}
 }
 
-func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId string) *Epfd {
+func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId string, abstractions *map[string]Abstraction) *Epfd {
 
 	epfd := &Epfd{
 		state:         state,
 		queue:         queue,
 		abstractionId: abstractionId,
+		abstractions:  abstractions,
 		alive:         state.GetProcessesAsMap(),
 		suspected:     make(map[*pb.ProcessId]struct{}, len(state.Processes)),
-		delta:         1 * time.Second,
-		delay:         1 * time.Second,
+		delta:         100 * time.Millisecond,
+		delay:         100 * time.Millisecond,
 
 		timeoutDone: make(chan struct{}, 1),
 	}
@@ -63,6 +65,9 @@ func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId strin
 		}
 	}()
 
+	pl := NewPl(epfd.state, epfd.queue, epfd.abstractions)
+	RegisterAbstraction(epfd.abstractions, epfd.abstractionId+".pl", pl)
+
 	return epfd
 }
 
@@ -72,7 +77,7 @@ func (epfd *Epfd) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", epfd.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", epfd.abstractionId, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", epfd.abstractionId, msg)
 
 	switch msg.GetType() {
 

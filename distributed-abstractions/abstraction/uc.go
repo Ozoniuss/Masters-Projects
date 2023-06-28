@@ -26,6 +26,8 @@ type Uc struct {
 
 func NewUc(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, abstractionId string) *Uc {
 
+	fmt.Println("GENERATED CONSENSUS")
+
 	l := state.GetHighestRankingProcess()
 	uc := &Uc{
 		state:         state,
@@ -41,11 +43,17 @@ func NewUc(state *procstate.ProcState, queue *queue.Queue, abstractions *map[str
 		decided:       false,
 	}
 
-	ep := NewEp(state, queue, fmt.Sprintf("%s.ep[%d]", abstractionId, 0),
+	fmt.Println("ABSTRACTIONS,", uc.abstractions)
+
+	ep := NewEp(state, queue, fmt.Sprintf("%s.ep[%d]", abstractionId, 0), abstractions,
 		EpState{valts: 0, val: &pb.Value{Defined: false}}, l, 0)
-	ec := NewEc(state, queue, abstractionId+".ec")
+	fmt.Println("new EP")
+	ec := NewEc(state, queue, abstractionId+".ec", ep.abstractions)
+	fmt.Println("new EC")
 	RegisterAbstraction(uc.abstractions, ep.abstractionId, ep)
+	fmt.Println("2")
 	RegisterAbstraction(uc.abstractions, ec.abstractionId, ec)
+	fmt.Println("RETURNED CONSENSUS")
 	return uc
 }
 
@@ -55,7 +63,7 @@ func (uc *Uc) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", uc.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", uc.abstractionId, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", uc.abstractionId, msg)
 
 	switch msg.GetType() {
 	case pb.Message_UC_PROPOSE:
@@ -90,7 +98,7 @@ func (uc *Uc) Handle(msg *pb.Message) error {
 		}
 
 		ep := NewEp(uc.state, uc.queue, fmt.Sprintf("%s.ep[%d]", uc.abstractionId, uc.ets),
-			newState, uc.leader, uc.ets)
+			uc.abstractions, newState, uc.leader, uc.ets)
 		RegisterAbstraction(uc.abstractions, ep.abstractionId, ep)
 		uc.check()
 

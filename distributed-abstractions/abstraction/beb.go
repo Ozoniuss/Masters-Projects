@@ -28,7 +28,7 @@ func (appbeb *Beb) Handle(msg *pb.Message) error {
 		return fmt.Errorf("%s handler received nil message", appbeb.abstractionId)
 	}
 
-	log.Printf("%s got message: %+v\n\n", appbeb.abstractionId, msg)
+	log.Printf("[%s got message]: {%+v}\n\n", appbeb.abstractionId, msg)
 
 	switch msg.GetType() {
 
