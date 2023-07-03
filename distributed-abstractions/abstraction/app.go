@@ -14,15 +14,21 @@ type App struct {
 	queue         *queue.Queue
 	abstractionId string
 	stopq         chan struct{}
+
+	hub_addr string
+	hub_port int32
 }
 
-func NewApp(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, stopq chan struct{}) *App {
+func NewApp(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, stopq chan struct{}, hub_addr string, hub_port int32) *App {
 	app := &App{
 		state:         state,
 		queue:         queue,
 		abstractions:  abstractions,
 		abstractionId: "app",
 		stopq:         stopq,
+
+		hub_addr: hub_addr,
+		hub_port: hub_port,
 	}
 
 	beb := NewBeb(app.state, app.queue, app.abstractionId+".beb")
@@ -135,8 +141,8 @@ func (app *App) Handle(msg *pb.Message) error {
 			ToAbstractionId:   Next(msg.GetToAbstractionId(), "pl"),
 			PlSend: &pb.PlSend{
 				Destination: &pb.ProcessId{
-					Host:  "127.0.0.1",
-					Port:  5000,
+					Host:  app.hub_addr,
+					Port:  app.hub_port,
 					Owner: "hub",
 				},
 				Message: &pb.Message{
@@ -160,8 +166,8 @@ func (app *App) Handle(msg *pb.Message) error {
 			ToAbstractionId:   Next(msg.GetToAbstractionId(), "pl"),
 			PlSend: &pb.PlSend{
 				Destination: &pb.ProcessId{
-					Host:  "127.0.0.1",
-					Port:  5000,
+					Host:  app.hub_addr,
+					Port:  app.hub_port,
 					Owner: "hub",
 				},
 				Message: &pb.Message{
@@ -213,8 +219,8 @@ func (app *App) Handle(msg *pb.Message) error {
 			PlSend: &pb.PlSend{
 				Message: msg.GetBebDeliver().GetMessage(),
 				Destination: &pb.ProcessId{
-					Host:  "127.0.0.1",
-					Port:  5000,
+					Host:  app.hub_addr,
+					Port:  app.hub_port,
 					Owner: "hub",
 				},
 			},
@@ -228,8 +234,8 @@ func (app *App) Handle(msg *pb.Message) error {
 			ToAbstractionId:   Next(msg.GetToAbstractionId(), "pl"),
 			PlSend: &pb.PlSend{
 				Destination: &pb.ProcessId{
-					Host:  "127.0.0.1",
-					Port:  5000,
+					Host:  app.hub_addr,
+					Port:  app.hub_port,
 					Owner: "hub",
 				},
 				Message: &pb.Message{

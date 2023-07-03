@@ -34,6 +34,8 @@ func NewEld(state *procstate.ProcState, queue *queue.Queue, abstractionId string
 func (eld *Eld) check() {
 	var leader *pb.ProcessId
 	maxRank := -1
+	// If leader does not have the maximum rank of the processes that are not
+	// suspected.
 	for _, proc := range eld.state.Processes {
 		// choose a leader from the processes that are not suspected
 		if _, ok := eld.suspected[proc]; !ok {
@@ -42,6 +44,11 @@ func (eld *Eld) check() {
 				maxRank = int(proc.Rank)
 			}
 		}
+	}
+
+	// Helps avoiding emitting a trust message for no leader.
+	if leader == nil {
+		return
 	}
 
 	if eld.leader != leader {

@@ -2,13 +2,15 @@ package abstraction
 
 import (
 	"fmt"
-	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
+	"log"
 	"strconv"
 	"strings"
 )
+
+// Fail-noisy model.
 
 type Uc struct {
 	state         *procstate.ProcState
@@ -26,49 +28,42 @@ type Uc struct {
 
 func NewUc(state *procstate.ProcState, queue *queue.Queue, abstractions *map[string]Abstraction, abstractionId string) *Uc {
 
-	fmt.Println("GENERATED CONSENSUS")
-
 	l := state.GetHighestRankingProcess()
 	uc := &Uc{
 		state:         state,
 		queue:         queue,
 		abstractionId: abstractionId,
 		abstractions:  abstractions,
-		val:           &pb.Value{Defined: false},
-		ets:           0,
-		leader:        l,
-		newts:         0,
-		newleader:     nil,
-		proposed:      false,
-		decided:       false,
+
+		val: &pb.Value{Defined: false},
+		// Start with an epoch consensus timestamp of 0 and leader with highest
+		// rank.
+		ets:       0,
+		leader:    l,
+		newts:     0,
+		newleader: nil,
+		proposed:  false,
+		decided:   false,
 	}
 
-	fmt.Println("ABSTRACTIONS,", uc.abstractions)
-
-	ep := NewEp(state, queue, fmt.Sprintf("%s.ep[%d]", abstractionId, 0), abstractions,
-		EpState{valts: 0, val: &pb.Value{Defined: false}}, l, 0)
-	fmt.Println("new EP")
+	ep := NewEp(state, queue, fmt.Sprintf("%s.ep[%d]", abstractionId, uc.ets), uc.abstractions,
+		EpState{valts: 0, val: &pb.Value{Defined: false}}, uc.leader, 0)
 	ec := NewEc(state, queue, abstractionId+".ec", ep.abstractions)
-	fmt.Println("new EC")
 	RegisterAbstraction(uc.abstractions, ep.abstractionId, ep)
-	fmt.Println("2")
 	RegisterAbstraction(uc.abstractions, ec.abstractionId, ec)
-	fmt.Println("RETURNED CONSENSUS")
+	log.Printf("HERE IS THE LEADER: %+v\n\n", l)
 	return uc
 }
 
 func (uc *Uc) Handle(msg *pb.Message) error {
 
-	if msg == nil {
-		return fmt.Errorf("%s handler received nil message", uc.abstractionId)
-	}
-
-	log.Printf("[%s got message]: {%+v}\n\n", uc.abstractionId, msg)
-
 	switch msg.GetType() {
+
 	case pb.Message_UC_PROPOSE:
 		uc.val = msg.GetUcPropose().GetValue()
 		uc.check()
+
+		// If I start a new epoch, abort the current epoch.
 	case pb.Message_EC_START_EPOCH:
 		uc.newts = int(msg.GetEcStartEpoch().GetNewTimestamp())
 		uc.newleader = msg.GetEcStartEpoch().GetNewLeader()
@@ -80,6 +75,8 @@ func (uc *Uc) Handle(msg *pb.Message) error {
 		}
 		trigger(uc.state, uc.queue, &abort)
 		// uc.check()
+
+		// If the epoch with the timestamp I have was aborted.
 	case pb.Message_EP_ABORTED:
 		// TODO: Should this condition be written differently?
 		if uc.ets != int(msg.GetEpAborted().GetEts()) {
@@ -92,6 +89,7 @@ func (uc *Uc) Handle(msg *pb.Message) error {
 		uc.leader = uc.newleader
 		uc.proposed = false
 
+		// Get the state from the aborted message. Use it as new
 		newState := EpState{
 			valts: int(msg.GetEpAborted().GetValueTimestamp()),
 			val:   msg.GetEpAborted().GetValue(),
@@ -117,7 +115,7 @@ func (uc *Uc) Handle(msg *pb.Message) error {
 				FromAbstractionId: uc.abstractionId,
 				ToAbstractionId:   Previous(uc.abstractionId),
 				UcDecide: &pb.UcDecide{
-					Value: uc.val,
+					Value: msg.GetEpDecide().GetValue(),
 				},
 			}
 			trigger(uc.state, uc.queue, &decide)
@@ -127,6 +125,7 @@ func (uc *Uc) Handle(msg *pb.Message) error {
 }
 
 func (uc *Uc) check() {
+	// If I'm a leader and a have a falue I propose.
 	if (uc.leader == uc.state.CurrentProcId) &&
 		(!uc.proposed) && (uc.val.GetDefined()) {
 		uc.proposed = true
@@ -138,6 +137,7 @@ func (uc *Uc) check() {
 				Value: uc.val,
 			},
 		}
+		log.Printf("PROPOISED.... \n\n")
 		trigger(uc.state, uc.queue, &epPropose)
 	}
 }

@@ -1,6 +1,7 @@
 package abstraction
 
 import (
+	"hw/log"
 	pb "hw/protobuf"
 	"hw/queue"
 	procstate "hw/state"
@@ -45,6 +46,9 @@ func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId strin
 		timeoutDone: make(chan struct{}, 1),
 	}
 
+	pl := NewPl(epfd.state, epfd.queue, epfd.abstractionId+".pl", epfd.abstractions)
+	RegisterAbstraction(epfd.abstractions, pl.abstractionId, pl)
+
 	// Start the timer right away.
 	epfd.timeoutDone <- struct{}{}
 
@@ -63,9 +67,6 @@ func NewEpfd(state *procstate.ProcState, queue *queue.Queue, abstractionId strin
 		}
 	}()
 
-	pl := NewPl(epfd.state, epfd.queue, epfd.abstractionId+".pl", epfd.abstractions)
-	RegisterAbstraction(epfd.abstractions, pl.abstractionId, pl)
-
 	return epfd
 }
 
@@ -78,11 +79,12 @@ func (epfd *Epfd) Handle(msg *pb.Message) error {
 		// timeout.
 		if intersect(epfd.alive, epfd.suspected) {
 			epfd.delay += epfd.delta
+			log.Printf("[epfd] increasing timeout to %v\n\n", epfd.delay)
 		}
 		for _, proc := range epfd.state.Processes {
 			// process is neither alive nor suspected
 			_, ok1 := epfd.alive[proc]
-			_, ok2 := epfd.alive[proc]
+			_, ok2 := epfd.suspected[proc]
 			if !ok1 && !ok2 {
 				epfd.suspected[proc] = struct{}{}
 				suspect := pb.Message{

@@ -16,6 +16,9 @@ const (
 	TCP         = "tcp"
 	OWNER       = "wtf"
 	HOST        = "127.0.0.1"
+
+	HUB_IP   = "127.0.0.1"
+	HUB_PORT = 5000
 )
 
 const MAX_MSG_SIZE = 256 * 256 * 256 * 256
@@ -41,7 +44,7 @@ func main() {
 		log.Printf("error during handshake: %s", err.Error())
 	}
 
-	app := abs.NewApp(state, queue, &abstractions, stopq)
+	app := abs.NewApp(state, queue, &abstractions, stopq, HUB_IP, HUB_PORT)
 	abs.RegisterAbstraction(&abstractions, abs.APP, app)
 
 	// Get the perfect link.

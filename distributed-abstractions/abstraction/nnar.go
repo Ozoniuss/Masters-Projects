@@ -6,6 +6,8 @@ import (
 	procstate "hw/state"
 )
 
+// This nnar works in a fail-silent model.
+
 type Nnar struct {
 	state      *procstate.ProcState
 	queue      *queue.Queue
@@ -27,9 +29,10 @@ func NewNnar(state *procstate.ProcState, queue *queue.Queue, registerId string) 
 		queue:      queue,
 		ts:         0,
 		wr:         0,
-		val:        nil,
-		writeval:   nil,
-		readval:    nil,
+		val:        &pb.Value{Defined: false},
+		acks:       0,
+		writeval:   &pb.Value{Defined: false},
+		readval:    &pb.Value{Defined: false},
 		rid:        0,
 		readlist:   make(map[int]*pb.NnarInternalValue),
 		reading:    false,
@@ -69,11 +72,13 @@ func (nnar *Nnar) Handle(msg *pb.Message) error {
 		trigger(nnar.state, nnar.queue, &bebBroadcast)
 
 	case pb.Message_NNAR_READ:
-		nnar.rid++
+
+		nnar.rid += 1
 		nnar.acks = 0
 		nnar.reading = true
 		nnar.readlist = make(map[int]*pb.NnarInternalValue)
 
+		// Broadcasting the readId to everyone.
 		bebBroadcast := pb.Message{
 			Type:              pb.Message_BEB_BROADCAST,
 			FromAbstractionId: msg.GetToAbstractionId(),
@@ -107,7 +112,7 @@ func (nnar *Nnar) Handle(msg *pb.Message) error {
 						FromAbstractionId: msg.GetFromAbstractionId(), // app.nnar[x]
 						ToAbstractionId:   msg.GetToAbstractionId(),   // app.nnarp[x]
 						NnarInternalValue: &pb.NnarInternalValue{
-							ReadId:     int32(nnar.rid),
+							ReadId:     msg.GetBebBroadcast().GetMessage().GetNnarInternalRead().GetReadId(),
 							Timestamp:  int32(nnar.ts),
 							WriterRank: int32(nnar.wr),
 							Value:      nnar.val,
@@ -155,6 +160,8 @@ func (nnar *Nnar) Handle(msg *pb.Message) error {
 		switch msg.GetPlDeliver().GetMessage().GetType() {
 		case pb.Message_NNAR_INTERNAL_VALUE:
 			// For simplification just break here instead of requeing.
+			// The rid value is associated with a specific read. A response is
+			// identified as for that read if it has that read id.
 			if msg.GetPlDeliver().GetMessage().GetNnarInternalValue().GetReadId() != int32(nnar.rid) {
 				break
 			}
@@ -175,13 +182,15 @@ func (nnar *Nnar) Handle(msg *pb.Message) error {
 			}
 
 			if len(nnar.readlist) > len(nnar.state.Processes)/2 {
+
+				// Get the highest ranking timestamp/rank pair.
 				maxTs := -1
 				maxWr := -1
 
 				for _, internalVal := range nnar.readlist {
 					if internalVal.GetTimestamp() > int32(maxTs) ||
 						(internalVal.GetTimestamp() == int32(maxTs) &&
-							internalVal.GetValue().GetV() > nnar.readval.GetV()) {
+							internalVal.GetWriterRank() > int32(maxWr)) {
 						nnar.readval = internalVal.GetValue()
 						maxTs = int(internalVal.GetTimestamp())
 						maxWr = int(internalVal.GetWriterRank())

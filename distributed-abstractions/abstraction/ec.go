@@ -6,14 +6,20 @@ import (
 	procstate "hw/state"
 )
 
+// Works for f crash faults (fail-noisy)
 type Ec struct {
 	state         *procstate.ProcState
 	queue         *queue.Queue
 	abstractionId string
 	abstractions  *map[string]Abstraction
 	trusted       *pb.ProcessId
-	lastts        int
-	ts            int
+	// Last epoch for which this process triggered a Start event
+	lastts int
+	// Last epoch it attempted to start with itself as the leader (in which
+	// NEWEPOCH is broadcasted)
+	//
+	// This is initially set as the process' rank.
+	ts int
 }
 
 func NewEc(state *procstate.ProcState, queue *queue.Queue, abstractionId string, abstractions *map[string]Abstraction) *Ec {
@@ -24,6 +30,7 @@ func NewEc(state *procstate.ProcState, queue *queue.Queue, abstractionId string,
 		abstractionId: abstractionId,
 		abstractions:  abstractions,
 		trusted:       state.GetHighestRankingProcess(),
+		lastts:        0,
 		ts:            int(state.CurrentProcId.Rank),
 	}
 
@@ -41,6 +48,9 @@ func (ec *Ec) Handle(msg *pb.Message) error {
 
 	// Only need to perform the check of one of those two change.
 	switch msg.GetType() {
+
+	// Whenever the leader detector makes p trust itself, add N to ts
+	// and send a NEWEPOCH with that timestamp.
 	case pb.Message_ELD_TRUST:
 		ec.trusted = msg.GetEldTrust().GetProcess()
 		if ec.trusted == ec.state.CurrentProcId {
@@ -68,6 +78,9 @@ func (ec *Ec) Handle(msg *pb.Message) error {
 		if msg.GetBebDeliver().GetMessage().GetType() != pb.Message_EC_INTERNAL_NEW_EPOCH {
 			break
 		}
+		// If the newts > lastts from l and this process trusts l, trigger a
+		// startepoch with newts and l. Otherwise, NACK that the new epoch
+		// cannot start.
 		if (msg.GetBebBroadcast().GetMessage().GetEcInternalNewEpoch().GetTimestamp() > int32(ec.lastts)) &&
 			(msg.GetBebDeliver().GetSender() == ec.trusted) {
 			ec.lastts = int(msg.GetBebBroadcast().GetMessage().GetEcInternalNewEpoch().GetTimestamp())
