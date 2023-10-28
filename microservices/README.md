@@ -1,3 +1,5 @@
+> Note: At the moment I wrote this article, I had only startup experience. Now that I worked on decomposing a big monolith at a big company, I'd probably write this a bit different. I haven't read this since then, but an updated version is on its way
+ 
 # Microservices Architecture for Beginners
 
 This short document contains my view about microservices, based on various resources I found online. At the moment of writing this, microservices is a hot topic, especially found in Go applications, and the motivation behind writing this document was that after over 1 year of developing microservices, I realized that I wouldn't really be able to tell why we're using them. Of course, there's the classical "it's easier to scale" and "it's easier to develop" type of arguments, but here I will be focusing not on _why_ these points are valid, because they're not universally true, thus rather _when_ they're valid. I will also attempt to explain the difference between a microservices architecture and a monolith architecture, while providing a short proof-of-concept example.
